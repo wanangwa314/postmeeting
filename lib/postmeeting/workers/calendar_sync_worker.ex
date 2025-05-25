@@ -7,36 +7,42 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"user_id" => user_id}}) do
     with user when not is_nil(user) <- Accounts.get_user!(user_id),
-         {:ok, events} <- Calendar.list_events_with_zoom(user) do
-      dbg(events)
-
+         {:ok, events} <- Calendar.list_events_with_meeting_links(user) do
       Enum.each(events, fn event ->
         # Extract meeting details - using string keys
         start_time = parse_event_time(event["start"])
 
-        zoom_link =
-          Calendar.extract_zoom_link(event["description"]) ||
-            Calendar.extract_zoom_link(event["location"])
+        # Try to extract meeting link and platform from description first, then location
+        meeting_info =
+          Calendar.extract_meeting_link_with_platform(event["description"]) ||
+            Calendar.extract_meeting_link_with_platform(event["location"])
 
-        # If no zoom link is found, skip this event
-        if zoom_link do
+        # If meeting link and platform are found, create/update the meeting
+        if meeting_info do
+          {meeting_link, platform_type} = meeting_info
+
           meeting_params = %{
             # Store original event summary as name
             name: event["summary"],
             start_time: start_time,
             status: "scheduled",
             user_id: user_id,
-            # Use zoom_link as the meeting_link
-            meeting_link: zoom_link
+            # Use meeting_link as the meeting_link
+            meeting_link: meeting_link,
+            # Set the platform type
+            platform_type: platform_type
           }
 
           # Check if a meeting with this link already exists
-          case Repo.get_by(Meeting, meeting_link: zoom_link) do
+          case Repo.get_by(Meeting, meeting_link: meeting_link) do
             nil ->
               # Create new meeting
               case Meeting.changeset(%Meeting{}, meeting_params) |> Repo.insert() do
                 {:ok, meeting} ->
-                  Logger.info("Created new meeting: #{meeting.id} with link #{zoom_link}")
+                  Logger.info(
+                    "Created new meeting: #{meeting.id} with #{platform_type} link #{meeting_link}"
+                  )
+
                   # Schedule bot creation
                   schedule_bot_creation(meeting)
 
@@ -47,10 +53,10 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
               end
 
             existing ->
-              Logger.info("Meeting with link #{zoom_link} already exists: #{existing.id}")
+              Logger.info("Meeting with link #{meeting_link} already exists: #{existing.id}")
           end
         else
-          Logger.info("Skipping event without a Zoom link: #{event["summary"]}")
+          Logger.info("Skipping event without a meeting link: #{event["summary"]}")
         end
       end)
 

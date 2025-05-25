@@ -6,15 +6,20 @@ defmodule Postmeeting.Calendar do
   alias Postmeeting.Accounts
 
   @doc """
-  Lists calendar events with Zoom links for a user.
+  Lists calendar events with meeting links for a user.
   Fetches events from the past week up to 1 month in the future.
   """
-  def list_events_with_zoom(user) do
+  def list_events_with_meeting_links(user) do
     with {:ok, google_account} <- get_google_account(user),
          {:ok, events} <- fetch_events(google_account.access_token) do
       dbg(events)
-      {:ok, filter_zoom_events(events)}
+      {:ok, filter_meeting_events(events)}
     end
+  end
+
+  # Keep the old function for backward compatibility
+  def list_events_with_zoom(user) do
+    list_events_with_meeting_links(user)
   end
 
   @doc """
@@ -68,16 +73,44 @@ defmodule Postmeeting.Calendar do
   def format_event_time(_, _), do: "Time not specified"
 
   @doc """
-  Extracts the first Zoom meeting link from text
+  Extracts meeting link and determines platform type from text
+  Returns {meeting_link, platform_type} or nil if no meeting link found
   """
-  def extract_zoom_link(nil), do: nil
+  def extract_meeting_link_with_platform(nil), do: nil
 
-  def extract_zoom_link(text) when is_binary(text) do
-    case Regex.run(~r/https:\/\/[^\/\s]*zoom\.us\/[jw]\/\d+[^\s<]*/, text) do
-      [url | _] -> url
+  def extract_meeting_link_with_platform(text) when is_binary(text) do
+    cond do
+      # Check for Zoom links
+      match = Regex.run(~r/https:\/\/[^\/\s]*zoom\.us\/[jw]\/\d+[^\s<]*/, text) ->
+        {List.first(match), "ZOOM"}
+
+      # Check for Teams links
+      match = Regex.run(~r/https:\/\/teams\.microsoft\.com\/l\/meetup-join\/[^\s<]*/, text) ->
+        {List.first(match), "TEAMS"}
+
+      # Check for Google Meet links
+      match = Regex.run(~r/https:\/\/meet\.google\.com\/[a-z\-]+/, text) ->
+        {List.first(match), "MEET"}
+
+      true ->
+        nil
+    end
+  end
+
+  @doc """
+  Extracts the first meeting link from text (backward compatibility)
+  """
+  def extract_meeting_link(nil), do: nil
+
+  def extract_meeting_link(text) when is_binary(text) do
+    case extract_meeting_link_with_platform(text) do
+      {link, _platform} -> link
       nil -> nil
     end
   end
+
+  # Keep old zoom-specific function for backward compatibility
+  def extract_zoom_link(text), do: extract_meeting_link(text)
 
   # Private functions
 
@@ -119,25 +152,33 @@ defmodule Postmeeting.Calendar do
     end
   end
 
-  defp filter_zoom_events(%{"items" => items}) when is_list(items) do
-    Enum.filter(items, &has_zoom_link?/1)
+  defp filter_meeting_events(%{"items" => items}) when is_list(items) do
+    Enum.filter(items, &has_meeting_link?/1)
   end
 
-  defp filter_zoom_events(_), do: []
+  defp filter_meeting_events(_), do: []
 
-  # Updated to handle string keys from Google Calendar API
-  defp has_zoom_link?(%{"description" => description, "location" => location}) do
-    (is_binary(description) && String.match?(description, ~r/zoom\.us\/[jw]\/\d+/i)) ||
-      (is_binary(location) && String.match?(location, ~r/zoom\.us\/[jw]\/\d+/i))
+  # Updated to detect Zoom, Teams, and Google Meet links
+  defp has_meeting_link?(%{"description" => description, "location" => location}) do
+    has_meeting_link_in_text?(description) || has_meeting_link_in_text?(location)
   end
 
-  defp has_zoom_link?(%{"description" => description}) when is_binary(description) do
-    String.match?(description, ~r/zoom\.us\/[jw]\/\d+/i)
+  defp has_meeting_link?(%{"description" => description}) when is_binary(description) do
+    has_meeting_link_in_text?(description)
   end
 
-  defp has_zoom_link?(%{"location" => location}) when is_binary(location) do
-    String.match?(location, ~r/zoom\.us\/[jw]\/\d+/i)
+  defp has_meeting_link?(%{"location" => location}) when is_binary(location) do
+    has_meeting_link_in_text?(location)
   end
 
-  defp has_zoom_link?(_), do: false
+  defp has_meeting_link?(_), do: false
+
+  # Helper function to check if text contains any meeting platform link
+  defp has_meeting_link_in_text?(text) when is_binary(text) do
+    String.match?(text, ~r/zoom\.us\/[jw]\/\d+/i) ||
+      String.match?(text, ~r/teams\.microsoft\.com\/l\/meetup-join/i) ||
+      String.match?(text, ~r/meet\.google\.com\/[a-z\-]+/i)
+  end
+
+  defp has_meeting_link_in_text?(_), do: false
 end

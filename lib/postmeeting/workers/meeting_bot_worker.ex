@@ -12,7 +12,7 @@ defmodule Postmeeting.Workers.MeetingBotWorker do
 
     # Only create bot for meetings that are about to start and don't have a bot yet
     if should_create_bot?(meeting) do
-      case Recall.create_bot(extract_meeting_url(meeting.name), meeting.name) do
+      case Recall.create_bot(meeting.meeting_link, meeting.name) do
         {:ok, %{"id" => bot_id}} ->
           meeting
           |> Meeting.changeset(%{bot_id: bot_id, status: "in_progress"})
@@ -34,7 +34,10 @@ defmodule Postmeeting.Workers.MeetingBotWorker do
     end
   end
 
-  defp should_create_bot?(%Meeting{bot_id: nil, status: "scheduled"} = meeting) do
+  defp should_create_bot?(
+         %Meeting{bot_id: nil, status: "scheduled", meeting_link: meeting_link} = meeting
+       )
+       when not is_nil(meeting_link) do
     # Check if meeting is starting within the next 5 minutes
     start_time = DateTime.to_unix(meeting.start_time)
     now = DateTime.to_unix(DateTime.utc_now())
@@ -42,14 +45,4 @@ defmodule Postmeeting.Workers.MeetingBotWorker do
   end
 
   defp should_create_bot?(_), do: false
-
-  defp extract_meeting_url(name) do
-    # TODO: Implement proper URL extraction from meeting name/description
-    # This is a placeholder implementation
-    if String.contains?(name, "zoom.us") do
-      name
-    else
-      nil
-    end
-  end
 end
