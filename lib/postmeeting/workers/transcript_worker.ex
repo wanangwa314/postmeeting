@@ -67,12 +67,7 @@ defmodule Postmeeting.Workers.TranscriptWorker do
         Logger.info("Null transcript for meeting #{meeting.id}, rescheduling check")
         reschedule_transcript_check(meeting.id, job)
 
-      {:ok, response} ->
-        # Unexpected response format - reschedule
-        Logger.warning(
-          "Unexpected transcript response for meeting #{meeting.id}: #{inspect(response)}, rescheduling"
-        )
-
+      {:ok, _response} ->
         reschedule_transcript_check(meeting.id, job)
 
       {:error, %{status: 404}} ->

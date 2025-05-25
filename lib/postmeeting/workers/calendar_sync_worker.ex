@@ -60,7 +60,7 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
 
               case Meeting.non_status_changeset(existing, non_status_params) |> Repo.update() do
                 {:ok, _updated_meeting} ->
-                  Logger.info("Updated non-critical fields for existing meeting: #{existing.id}")
+                  :ok
 
                 {:error, changeset} ->
                   Logger.error(
