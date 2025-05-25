@@ -6,7 +6,7 @@ defmodule Postmeeting.Accounts do
   import Ecto.Query, warn: false
   alias Postmeeting.Repo
 
-  alias Postmeeting.Accounts.{User, UserToken, UserNotifier}
+  alias Postmeeting.Accounts.{User, UserToken, UserNotifier, GoogleAccount}
 
   ## Database getters
 
@@ -349,5 +349,41 @@ defmodule Postmeeting.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  ## Google Account Management
+
+  def create_or_update_google_account(user, auth) do
+    attrs = %{
+      access_token: auth.credentials.token,
+      refresh_token: auth.credentials.refresh_token,
+      expires_at: calculate_expiry(auth.credentials.expires_at),
+      scope: auth.credentials.scopes |> Enum.join(" "),
+      user_id: user.id
+    }
+
+    case get_google_account(user) do
+      nil -> %GoogleAccount{}
+      account -> account
+    end
+    |> GoogleAccount.changeset(attrs)
+    |> Repo.insert_or_update()
+  end
+
+  def get_google_account(user) do
+    Repo.get_by(GoogleAccount, user_id: user.id)
+  end
+
+  def disconnect_google_account(user) do
+    case get_google_account(user) do
+      nil -> {:error, :not_connected}
+      account -> Repo.delete(account)
+    end
+  end
+
+  defp calculate_expiry(nil), do: nil
+
+  defp calculate_expiry(expires_at) when is_integer(expires_at) do
+    DateTime.from_unix!(expires_at)
   end
 end

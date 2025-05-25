@@ -31,6 +31,14 @@ defmodule PostmeetingWeb.Router do
     delete "/logout", AuthController, :delete
   end
 
+  # Protected routes
+  scope "/", PostmeetingWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live "/calendar", CalendarLive
+    live "/settings", UserSettingsLive
+  end
+
   # Enable LiveDashboard in development
   if Application.compile_env(:postmeeting, :dev_routes) do
     import Phoenix.LiveDashboard.Router
@@ -41,12 +49,5 @@ defmodule PostmeetingWeb.Router do
       live_dashboard "/dashboard", metrics: PostmeetingWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
-  end
-
-  # Protected routes
-  scope "/", PostmeetingWeb do
-    pipe_through [:browser, :require_authenticated_user]
-
-    # Add your protected routes here
   end
 end

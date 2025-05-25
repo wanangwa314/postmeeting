@@ -2,7 +2,8 @@ defmodule PostmeetingWeb.UserAuth do
   use PostmeetingWeb, :verified_routes
 
   import Plug.Conn
-  import Phoenix.Controller
+  import Phoenix.LiveView
+  import Phoenix.Component, only: [assign_new: 3]
 
   alias Postmeeting.Accounts
 
@@ -17,7 +18,7 @@ defmodule PostmeetingWeb.UserAuth do
     |> renew_session()
     |> put_token_in_session(token)
     |> put_resp_cookie(@remember_me_cookie, token, @remember_me_options)
-    |> redirect(to: ~p"/")
+    |> Phoenix.Controller.redirect(to: ~p"/calendar")
   end
 
   def log_out_user(conn) do
@@ -27,7 +28,7 @@ defmodule PostmeetingWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: ~p"/")
+    |> Phoenix.Controller.redirect(to: ~p"/")
   end
 
   def fetch_current_user(conn, _opts) do
@@ -36,14 +37,46 @@ defmodule PostmeetingWeb.UserAuth do
     assign(conn, :current_user, user)
   end
 
+  def on_mount(:ensure_authenticated, _params, session, socket) do
+    with {:ok, socket} <- mount_current_user(socket, session) do
+      if socket.assigns.current_user do
+        {:cont, socket}
+      else
+        socket =
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+          |> redirect(to: ~p"/")
+
+        {:halt, socket}
+      end
+    end
+  end
+
+  def on_mount(:mount_current_user, _params, session, socket) do
+    mount_current_user(socket, session)
+  end
+
   def require_authenticated_user(conn, _opts) do
     if conn.assigns[:current_user] do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
-      |> redirect(to: ~p"/auth/google")
+      |> Phoenix.Controller.put_flash(:error, "You must log in to access this page.")
+      |> Phoenix.Controller.redirect(to: ~p"/auth/google")
       |> halt()
+    end
+  end
+
+  defp mount_current_user(socket, session) do
+    case session do
+      %{"user_token" => user_token} ->
+        {:ok,
+         assign_new(socket, :current_user, fn ->
+           Accounts.get_user_by_session_token(user_token)
+         end)}
+
+      %{} ->
+        {:ok, assign(socket, :current_user, nil)}
     end
   end
 

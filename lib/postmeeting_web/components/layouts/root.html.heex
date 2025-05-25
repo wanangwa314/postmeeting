@@ -11,32 +11,35 @@
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
   </head>
-  <body class="bg-white">
-    <ul class="relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
-      <%= if @current_user do %>
-        <li class="text-[0.8125rem] leading-6 text-zinc-900">
-          {@current_user.email}
-        </li>
-        <li>
-          <.link
-            href={~p"/auth/logout"}
-            method="delete"
-            class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-zinc-700"
-          >
-            Log out
-          </.link>
-        </li>
-      <% else %>
-        <li>
-          <.link
-            href={~p"/auth/google"}
-            class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-zinc-700"
-          >
-            Sign in with Google
-          </.link>
-        </li>
-      <% end %>
-    </ul>
+  <body class="bg-white antialiased">
+    <header class="px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between border-b border-zinc-100 py-3 text-sm">
+        <div class="flex items-center gap-4">
+          <a href="/" class="hover:text-zinc-700">
+            Home
+          </a>
+          <%= if @current_user do %>
+            <a href={~p"/calendar"} class="hover:text-zinc-700">
+              Calendar
+            </a>
+          <% end %>
+        </div>
+        <div class="flex items-center gap-4 font-semibold leading-6 text-zinc-900">
+          <%= if @current_user do %>
+            <a href={~p"/settings"} class="hover:text-zinc-700">
+              Settings
+            </a>
+            <.link href={~p"/auth/logout"} method="delete" class="hover:text-zinc-700">
+              Log out
+            </.link>
+          <% else %>
+            <a href={~p"/auth/google"} class="hover:text-zinc-700">
+              Log in with Google
+            </a>
+          <% end %>
+        </div>
+      </div>
+    </header>
     {@inner_content}
   </body>
 </html>

@@ -67,8 +67,9 @@ config :ueberauth, Ueberauth,
     google:
       {Ueberauth.Strategy.Google,
        [
-         default_scope: "email profile",
-         prompt: "select_account"
+         default_scope: "email profile https://www.googleapis.com/auth/calendar.readonly",
+         prompt: "consent",
+         access_type: "offline"
        ]}
   ]
 
