@@ -5,6 +5,7 @@ defmodule Postmeeting.Workers.TranscriptWorker do
   alias Postmeeting.Repo
   alias Postmeeting.Meetings.Meeting
   alias Postmeeting.Recall
+  alias Postmeeting.Workers.ContentGenerationWorker
 
   # Maximum time to wait for transcript (2 hours)
   @max_wait_time 2 * 60 * 60
@@ -48,14 +49,26 @@ defmodule Postmeeting.Workers.TranscriptWorker do
           "Transcript received for meeting #{meeting.id}, #{length(transcript)} segments"
         )
 
-        meeting
-        |> Meeting.changeset(%{
-          transcript: Jason.encode!(transcript),
-          status: "completed"
-        })
-        |> Repo.update()
+        case meeting
+             |> Meeting.changeset(%{
+               transcript: Jason.encode!(transcript)
+               # Note: status will be set to "completed" by ContentGenerationWorker
+             })
+             |> Repo.update() do
+          {:ok, updated_meeting} ->
+            # Schedule content generation
+            Logger.info("Scheduling content generation for meeting #{meeting.id}")
 
-        {:ok, :completed}
+            %{meeting_id: updated_meeting.id}
+            |> ContentGenerationWorker.new()
+            |> Oban.insert()
+
+            {:ok, :transcript_saved}
+
+          {:error, changeset} ->
+            Logger.error("Failed to update meeting #{meeting.id}: #{inspect(changeset.errors)}")
+            {:error, "Failed to save transcript"}
+        end
 
       {:ok, %{"transcript" => []}} ->
         # Empty transcript - reschedule

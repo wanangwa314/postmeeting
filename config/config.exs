@@ -105,7 +105,11 @@ config :postmeeting, Oban,
     meetings: 10,
     transcripts: 10,
     # Added maintenance queue for token refresh
-    maintenance: 5
+    maintenance: 5,
+    # Added content generation queue
+    content_generation: 5,
+    # Added monitoring queue for bot status
+    monitoring: 3
   ]
 
 # Import environment specific config. This must remain at the bottom
