@@ -27,10 +27,11 @@ defmodule Postmeeting.Services.GeminiService do
       ]
     }
 
-    client = Tesla.client(
-      [Tesla.Middleware.BaseUrl, Tesla.Middleware.JSON],
-      adapter: {Tesla.Adapter.Hackney, [recv_timeout: 30_000, connect_timeout: 15_000]}
-    )
+    client =
+      Tesla.client(
+        [Tesla.Middleware.BaseUrl, Tesla.Middleware.JSON],
+        adapter: {Tesla.Adapter.Hackney, [recv_timeout: 30_000, connect_timeout: 15_000]}
+      )
 
     url = @gemini_base_url <> ":generateContent?key=" <> @gemini_api_key
 
@@ -38,8 +39,10 @@ defmodule Postmeeting.Services.GeminiService do
       {:ok, %Tesla.Env{status: 200, body: resp_body}} ->
         # resp_body is already decoded by Tesla.Middleware.JSON
         handle_successful_response(resp_body)
+
       {:ok, %Tesla.Env{status: status_code, body: error_body}} ->
         {:error, "Gemini API request failed with status #{status_code}: #{inspect(error_body)}"}
+
       {:error, reason} ->
         {:error, "HTTP request to Gemini API failed: #{inspect(reason)}"}
     end
@@ -58,6 +61,7 @@ defmodule Postmeeting.Services.GeminiService do
       {:error, "Failed to extract text from Gemini response: #{inspect(parsed_resp)}"}
     end
   end
+
   defp handle_successful_response(_other_body) do
     {:error, "Gemini API response body was not a map."}
   end
