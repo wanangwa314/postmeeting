@@ -39,4 +39,11 @@ defmodule Postmeeting.Meetings.Meeting do
     |> validate_inclusion(:status, ["scheduled", "in_progress", "completed"])
     |> validate_inclusion(:platform_type, ["MEET", "TEAMS", "ZOOM"])
   end
+
+  def update_changeset(meeting, attrs) do
+    meeting
+    |> cast(attrs, [
+      :start_time
+    ])
+  end
 end

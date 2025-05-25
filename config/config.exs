@@ -88,7 +88,7 @@ config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
   client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
 
 # Configure Recall.ai
-config :postmeeting, :recall, api_key: System.get_env("RECALL_API_KEY")
+config :postmeeting, :recall, api_key: "a9020bfae28aaf581cf44b9f8fafb7b1b6432323"
 
 config :postmeeting, Oban,
   repo: Postmeeting.Repo,

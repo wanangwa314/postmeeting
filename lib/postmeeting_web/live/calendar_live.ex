@@ -39,11 +39,7 @@ defmodule PostmeetingWeb.CalendarLive do
               <li class="p-4 bg-white shadow sm:rounded-lg">
                 <h3 class="text-lg font-medium text-gray-900">{meeting.name}</h3>
                 <p class="text-sm text-gray-500">
-                  Started at: {Timex.format!(
-                    meeting.start_time,
-                    "{YYYY}-{0M}-{0D} {h24}:{m}:{s}",
-                    :local
-                  )}
+                  Started at: {meeting.start_time}
                 </p>
               </li>
             <% end %>
@@ -79,11 +75,7 @@ defmodule PostmeetingWeb.CalendarLive do
               <li class="p-4 bg-white shadow sm:rounded-lg">
                 <h3 class="text-lg font-medium text-gray-900">{meeting.name}</h3>
                 <p class="text-sm text-gray-500">
-                  Completed at: {Timex.format!(
-                    meeting.start_time,
-                    "{YYYY}-{0M}-{0D} {h24}:{m}:{s}",
-                    :local
-                  )}
+                  Completed at: {meeting.start_time}
                 </p>
                 <div class="mt-2 p-2 bg-gray-50 rounded">
                   <h4 class="text-xs font-semibold text-gray-700">Transcript:</h4>

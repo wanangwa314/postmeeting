@@ -23,16 +23,11 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
           {meeting_link, platform_type} = meeting_info
 
           meeting_params = %{
-            # Store original event summary as name
             name: event["summary"],
             start_time: start_time,
-            status: "scheduled",
             user_id: user_id,
-            # Use meeting_link as the meeting_link
             meeting_link: meeting_link,
-            # Set the platform type
             platform_type: platform_type,
-            # Store additional event metadata
             calendar_event_id: event["id"],
             description: event["description"],
             location: event["location"],
@@ -61,9 +56,9 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
 
             existing ->
               # Update existing meeting with latest information
-              case Meeting.changeset(existing, meeting_params) |> Repo.update() do
-                {:ok, updated_meeting} ->
-                  Logger.info("Updated existing meeting: #{updated_meeting.id} with latest info")
+              case Meeting.update_changeset(existing, meeting_params) |> Repo.update() do
+                {:ok, _updated_meeting} ->
+                  :ok
 
                 {:error, changeset} ->
                   Logger.error(
