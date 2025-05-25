@@ -90,6 +90,15 @@ config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
 # Configure Recall.ai
 config :postmeeting, :recall, api_key: System.get_env("RECALL_API_KEY")
 
+config :postmeeting, Oban,
+  repo: Postmeeting.Repo,
+  plugins: [Oban.Plugins.Pruner],
+  queues: [
+    calendar: 10,
+    meetings: 10,
+    transcripts: 10
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
