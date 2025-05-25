@@ -61,11 +61,7 @@ defmodule PostmeetingWeb.CalendarLive do
               <li class="p-4 bg-white shadow sm:rounded-lg">
                 <h3 class="text-lg font-medium text-gray-900">{meeting.name}</h3>
                 <p class="text-sm text-gray-500">
-                  Starts at: {Timex.format!(
-                    meeting.start_time,
-                    "{YYYY}-{0M}-{0D} {h24}:{m}:{s}",
-                    :local
-                  )}
+                  Starts at: {meeting.start_time}
                 </p>
               </li>
             <% end %>

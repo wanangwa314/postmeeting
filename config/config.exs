@@ -94,12 +94,18 @@ config :postmeeting, Oban,
   repo: Postmeeting.Repo,
   plugins: [
     Oban.Plugins.Pruner,
-    {Oban.Plugins.Cron, crontab: [{"* * * * *", Postmeeting.Workers.ScheduledCalendarSyncWorker}]}
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"* * * * *", Postmeeting.Workers.GoogleTokenRefreshWorker},
+       {"* * * * *", Postmeeting.Workers.ScheduledCalendarSyncWorker}
+     ]}
   ],
   queues: [
     calendar: 10,
     meetings: 10,
-    transcripts: 10
+    transcripts: 10,
+    # Added maintenance queue for token refresh
+    maintenance: 5
   ]
 
 # Import environment specific config. This must remain at the bottom

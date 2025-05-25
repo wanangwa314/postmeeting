@@ -386,6 +386,21 @@ defmodule Postmeeting.Accounts do
     end
   end
 
+  def update_google_account(%GoogleAccount{} = google_account, attrs) do
+    google_account
+    |> GoogleAccount.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def list_google_accounts_expiring_soon(threshold_datetime) do
+    from(g in GoogleAccount,
+      where:
+        not is_nil(g.refresh_token) and
+          (is_nil(g.expires_at) or g.expires_at <= ^threshold_datetime)
+    )
+    |> Repo.all()
+  end
+
   def create_or_update_google_account(user, auth) do
     google_email = auth.info.email
     existing_account = Repo.get_by(GoogleAccount, user_id: user.id, email: google_email)
@@ -393,7 +408,8 @@ defmodule Postmeeting.Accounts do
     attrs = %{
       access_token: auth.credentials.token,
       refresh_token: auth.credentials.refresh_token,
-      expires_at: calculate_expiry(auth.credentials.expires_at),
+      # Ensure expires_at is handled correctly if it might be nil from auth
+      expires_at: calculate_expiry(Map.get(auth.credentials, :expires_at)),
       scope: auth.credentials.scopes |> Enum.join(" "),
       email: google_email,
       name: auth.info.name || auth.info.nickname,
@@ -407,8 +423,17 @@ defmodule Postmeeting.Accounts do
         |> Repo.insert()
 
       account ->
+        # When updating, we might not always get a new refresh token
+        # Only update refresh_token if a new one is provided
+        update_attrs =
+          if is_nil(attrs.refresh_token) do
+            Map.drop(attrs, [:refresh_token])
+          else
+            attrs
+          end
+
         account
-        |> GoogleAccount.changeset(attrs)
+        |> GoogleAccount.changeset(update_attrs)
         |> Repo.update()
     end
   end
