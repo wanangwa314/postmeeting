@@ -7,18 +7,6 @@ import Config
 # any compile-time configuration in here, as it won't be applied.
 # The block below contains prod specific runtime configuration.
 
-# Configure OAuth providers (available in all environments)
-config :ueberauth, Ueberauth.Strategy.Google.OAuth,
-  client_id: System.get_env("GOOGLE_CLIENT_ID"),
-  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
-
-config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
-  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
-  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
-
-# Configure Recall API
-config :postmeeting, :recall_api, api_key: System.get_env("RECALL_API_KEY")
-
 # ## Using releases
 #
 # If you use `mix release`, you need to explicitly enable the server

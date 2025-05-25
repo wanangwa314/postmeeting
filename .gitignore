@@ -35,8 +35,3 @@ postmeeting-*.tar
 npm-debug.log
 /assets/node_modules/
 
-# Environment files with sensitive data
-.env
-.env.local
-.env.*.local
-

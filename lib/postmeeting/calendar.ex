@@ -13,6 +13,7 @@ defmodule Postmeeting.Calendar do
   def list_events_with_meeting_links(user) do
     with {:ok, google_account} <- get_google_account(user),
          {:ok, events} <- fetch_events(google_account.access_token) do
+      dbg(events)
       {:ok, filter_meeting_events(events)}
     end
   end
