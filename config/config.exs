@@ -96,7 +96,7 @@ config :postmeeting, Oban,
     Oban.Plugins.Pruner,
     {Oban.Plugins.Cron,
      crontab: [
-       {"* * * * *", Postmeeting.Workers.GoogleTokenRefreshWorker},
+       {"@hourly", Postmeeting.Workers.GoogleTokenRefreshWorker},
        {"* * * * *", Postmeeting.Workers.ScheduledCalendarSyncWorker}
      ]}
   ],
