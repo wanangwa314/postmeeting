@@ -35,10 +35,10 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
             organizer_email: get_in(event, ["organizer", "email"])
           }
 
-          # Check if a meeting with this link already exists
-          case Repo.get_by(Meeting, meeting_link: meeting_link) do
+          # Check if a meeting with this calendar_event_id already exists to ensure uniqueness
+          case Repo.get_by(Meeting, calendar_event_id: event["id"]) do
             nil ->
-              # Create new meeting
+              # Create new meeting only if it doesn't exist
               case Meeting.changeset(%Meeting{}, meeting_params) |> Repo.insert() do
                 {:ok, meeting} ->
                   Logger.info(
@@ -55,14 +55,16 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
               end
 
             existing ->
-              # Update existing meeting with latest information
-              case Meeting.update_changeset(existing, meeting_params) |> Repo.update() do
+              # Meeting already exists - Calendar sync never updates status, only non-critical fields
+              non_status_params = Map.drop(meeting_params, [:status])
+
+              case Meeting.non_status_changeset(existing, non_status_params) |> Repo.update() do
                 {:ok, _updated_meeting} ->
-                  :ok
+                  Logger.info("Updated non-critical fields for existing meeting: #{existing.id}")
 
                 {:error, changeset} ->
                   Logger.error(
-                    "Failed to update meeting: #{inspect(changeset.errors)} for event: #{event["summary"]}"
+                    "Failed to update meeting details: #{inspect(changeset.errors)} for event: #{event["summary"]}"
                   )
               end
           end

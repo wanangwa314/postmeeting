@@ -30,7 +30,8 @@ defmodule Postmeeting.Recall do
   def create_bot(meeting_url, title \\ nil) do
     post("/bot", %{
       "meeting_url" => meeting_url,
-      "title" => title
+      "bot_name" => title || "Meeting Notetaker",
+      "transcription_options" => %{"provider" => "meeting_captions"}
     })
     |> handle_response()
   end

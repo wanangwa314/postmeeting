@@ -14,22 +14,42 @@ defmodule Postmeeting.Workers.MeetingBotWorker do
     if should_create_bot?(meeting) do
       case Recall.create_bot(meeting.meeting_link, meeting.name) do
         {:ok, %{"id" => bot_id}} ->
-          meeting
-          |> Meeting.changeset(%{bot_id: bot_id, status: "in_progress"})
-          |> Repo.update()
+          # Update meeting with bot_id and status
+          case meeting
+               |> Meeting.changeset(%{bot_id: bot_id, status: "in_progress"})
+               |> Repo.update() do
+            {:ok, updated_meeting} ->
+              Logger.info("Bot created successfully for meeting #{meeting_id}, bot_id: #{bot_id}")
 
-          # Schedule transcript check after some time
-          %{meeting_id: meeting_id}
-          |> Postmeeting.Workers.TranscriptWorker.new(schedule_in: 30)
-          |> Oban.insert()
+              # Schedule transcript check - start checking after 1 minute to allow bot to join
+              %{meeting_id: updated_meeting.id}
+              |> Postmeeting.Workers.TranscriptWorker.new(schedule_in: 60)
+              |> Oban.insert()
 
-          :ok
+              # Also start monitoring the bot status
+              %{meeting_id: updated_meeting.id}
+              |> Postmeeting.Workers.BotMonitorWorker.new(schedule_in: 30)
+              |> Oban.insert()
+
+              :ok
+
+            {:error, changeset} ->
+              Logger.error("Failed to update meeting with bot_id: #{inspect(changeset.errors)}")
+              {:error, "Failed to update meeting"}
+          end
 
         {:error, error} ->
           Logger.error("Failed to create bot for meeting #{meeting_id}: #{inspect(error)}")
+
+          # Retry bot creation in 2 minutes if it failed
+          %{meeting_id: meeting_id}
+          |> __MODULE__.new(schedule_in: 120)
+          |> Oban.insert()
+
           {:error, "Failed to create bot"}
       end
     else
+      Logger.info("Meeting #{meeting_id} doesn't need bot creation at this time")
       :ok
     end
   end

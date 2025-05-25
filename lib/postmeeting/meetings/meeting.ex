@@ -13,6 +13,11 @@ defmodule Postmeeting.Meetings.Meeting do
     field :linkedin_post, :string
     field :facebook_post, :string
     field :email, :string
+    field :calendar_event_id, :string
+    field :description, :string
+    field :location, :string
+    field :attendees, {:array, :string}, default: []
+    field :organizer_email, :string
     belongs_to :user, Postmeeting.Accounts.User
 
     timestamps()
@@ -32,11 +37,39 @@ defmodule Postmeeting.Meetings.Meeting do
       :platform_type,
       :linkedin_post,
       :facebook_post,
-      :email
+      :email,
+      :calendar_event_id,
+      :description,
+      :location,
+      :attendees,
+      :organizer_email
     ])
     |> validate_required([:name, :start_time, :user_id, :meeting_link])
     |> unique_constraint(:meeting_link)
+    |> unique_constraint(:calendar_event_id)
     |> validate_inclusion(:status, ["scheduled", "in_progress", "completed"])
+    |> validate_inclusion(:platform_type, ["MEET", "TEAMS", "ZOOM"])
+  end
+
+  @doc """
+  Changeset for updating non-critical fields without touching the status.
+  Used by calendar sync to update meeting details without affecting workflow status.
+  """
+  def non_status_changeset(meeting, attrs) do
+    meeting
+    |> cast(attrs, [
+      :name,
+      :start_time,
+      :meeting_link,
+      :platform_type,
+      :description,
+      :location,
+      :attendees,
+      :organizer_email
+    ])
+    |> validate_required([:name, :start_time, :meeting_link])
+    |> unique_constraint(:meeting_link)
+    |> unique_constraint(:calendar_event_id)
     |> validate_inclusion(:platform_type, ["MEET", "TEAMS", "ZOOM"])
   end
 
