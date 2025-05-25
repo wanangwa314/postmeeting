@@ -71,7 +71,9 @@ defmodule Postmeeting.MixProject do
       {:hackney, "~> 1.17"},
       {:google_api_calendar, "~> 0.26.0"},
       {:oban, "~> 2.16"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      # Environment variable loading
+      {:dotenv, "~> 3.1.0", only: [:dev, :test]}
     ]
   end
 

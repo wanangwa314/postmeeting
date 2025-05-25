@@ -80,8 +80,8 @@ config :ueberauth, Ueberauth,
 
 # Configure Google OAuth
 config :ueberauth, Ueberauth.Strategy.Google.OAuth,
-  client_id: "1085518600345-gdejvt7bmi752nuf2gdl4jhep8nco9pe.apps.googleusercontent.com",
-  client_secret: "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"
+  client_id: System.get_env("GOOGLE_CLIENT_ID"),
+  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
 
 config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
   client_id: System.get_env("FACEBOOK_CLIENT_ID"),

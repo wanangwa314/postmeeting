@@ -1,11 +1,18 @@
 import Config
 
+# Load environment variables from .env file in development
+try do
+  Dotenv.load()
+rescue
+  _ -> :ok
+end
+
 # Configure your database
 config :postmeeting, Postmeeting.Repo,
-  username: "postgres",
-  password: "pass",
-  hostname: "localhost",
-  database: "postmeeting_dev",
+  username: System.get_env("DATABASE_USERNAME", "postgres"),
+  password: System.get_env("DATABASE_PASSWORD", "pass"),
+  hostname: System.get_env("DATABASE_HOST", "localhost"),
+  database: System.get_env("DATABASE_NAME", "postmeeting_dev"),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
