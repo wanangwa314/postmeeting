@@ -353,7 +353,22 @@ defmodule Postmeeting.Accounts do
 
   ## Google Account Management
 
-  def create_or_update_google_account(user, auth) do
+  def list_google_accounts(user) do
+    Repo.all(from g in GoogleAccount, where: g.user_id == ^user.id)
+  end
+
+  def get_google_account(user, id) do
+    Repo.get_by(GoogleAccount, user_id: user.id, id: id)
+  end
+
+  def disconnect_google_account(user, account_id) do
+    case get_google_account(user, account_id) do
+      nil -> {:error, :not_found}
+      account -> Repo.delete(account)
+    end
+  end
+
+  def create_google_account(user, auth) do
     attrs = %{
       access_token: auth.credentials.token,
       refresh_token: auth.credentials.refresh_token,
@@ -362,23 +377,9 @@ defmodule Postmeeting.Accounts do
       user_id: user.id
     }
 
-    case get_google_account(user) do
-      nil -> %GoogleAccount{}
-      account -> account
-    end
+    %GoogleAccount{}
     |> GoogleAccount.changeset(attrs)
-    |> Repo.insert_or_update()
-  end
-
-  def get_google_account(user) do
-    Repo.get_by(GoogleAccount, user_id: user.id)
-  end
-
-  def disconnect_google_account(user) do
-    case get_google_account(user) do
-      nil -> {:error, :not_connected}
-      account -> Repo.delete(account)
-    end
+    |> Repo.insert()
   end
 
   defp calculate_expiry(nil), do: nil
