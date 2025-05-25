@@ -98,7 +98,16 @@ defmodule PostmeetingWeb.UserSettingsLive do
     ~H"""
     <div class="mx-auto max-w-2xl space-y-12 py-12">
       <div>
-        <h1 class="text-lg font-semibold leading-8">Google Calendar Integration</h1>
+        <div class="flex justify-between items-center">
+          <h1 class="text-lg font-semibold leading-8">Google Calendar Integration</h1>
+          <.link
+            :if={!Enum.empty?(@google_accounts)}
+            href={~p"/auth/google"}
+            class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+          >
+            Add Another Account
+          </.link>
+        </div>
         <div class="mt-6 bg-white shadow sm:rounded-lg">
           <div class="px-4 py-5 sm:p-6">
             <div class="space-y-6">
@@ -115,89 +124,20 @@ defmodule PostmeetingWeb.UserSettingsLive do
               <% else %>
                 <%= for account <- @google_accounts do %>
                   <div class="flex items-start justify-between">
-                    <div class="flex items-start space-x-3">
-                      <div class="flex-shrink-0">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="h-6 w-6 text-green-500"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <p class="text-sm font-medium text-gray-900">
-                          Connected account with scopes:
-                        </p>
-                        <p class="mt-1 text-xs text-gray-500">
-                          {account.scope}
-                        </p>
-                        <p class="mt-1 text-xs text-gray-500">
-                          Connected {Calendar.format_relative_time(account.inserted_at)}
-                        </p>
-                      </div>
+                    <div class="text-sm text-gray-900">
+                      <p class="font-medium">{account.name || account.email}</p>
+                      <p class="text-gray-500">{account.email}</p>
                     </div>
                     <button
                       phx-click="disconnect_google"
                       phx-value-id={account.id}
                       class="text-sm font-medium text-red-600 hover:text-red-500"
+                      data-confirm="Are you sure you want to disconnect this Google account?"
                     >
                       Disconnect
                     </button>
                   </div>
                 <% end %>
-
-                <div class="mt-8">
-                  <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-medium text-gray-900">
-                      Upcoming Meetings with Zoom Links
-                    </h2>
-                    <button
-                      phx-click="refresh_events"
-                      class="text-sm text-blue-600 hover:text-blue-500"
-                    >
-                      Refresh
-                    </button>
-                  </div>
-                  <div class="mt-4 divide-y divide-gray-200">
-                    <%= if Enum.empty?(@calendar_events) do %>
-                      <p class="py-4 text-sm text-gray-500">
-                        No upcoming meetings with Zoom links found.
-                      </p>
-                    <% else %>
-                      <%= for event <- @calendar_events do %>
-                        <div class="py-4">
-                          <div class="flex justify-between">
-                            <div>
-                              <h3 class="text-sm font-medium text-gray-900">
-                                {event.summary}
-                              </h3>
-                              <p class="mt-1 text-xs text-gray-500">
-                                {Calendar.format_event_time(event.start, event.end)}
-                              </p>
-                            </div>
-                            <%= if zoom_link = Calendar.extract_zoom_link(event.description) do %>
-                              <.link
-                                href={zoom_link}
-                                target="_blank"
-                                class="text-sm font-medium text-blue-600 hover:text-blue-500"
-                              >
-                                Join Zoom
-                              </.link>
-                            <% end %>
-                          </div>
-                        </div>
-                      <% end %>
-                    <% end %>
-                  </div>
-                </div>
               <% end %>
             </div>
           </div>

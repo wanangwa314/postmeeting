@@ -385,6 +385,8 @@ defmodule Postmeeting.Accounts do
       refresh_token: auth.credentials.refresh_token,
       expires_at: calculate_expiry(auth.credentials.expires_at),
       scope: auth.credentials.scopes |> Enum.join(" "),
+      email: auth.info.email,
+      name: auth.info.name || auth.info.nickname,
       user_id: user.id
     }
 
