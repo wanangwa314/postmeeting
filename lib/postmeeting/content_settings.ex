@@ -11,7 +11,11 @@ defmodule Postmeeting.ContentSettings do
   Returns the list of content generation settings for a user.
   """
   def list_user_generation_settings(user_id) do
-    Repo.all(from g in GenerationSetting, where: g.user_id == ^user_id, order_by: [asc: g.platform, asc: g.type])
+    Repo.all(
+      from g in GenerationSetting,
+        where: g.user_id == ^user_id,
+        order_by: [asc: g.platform, asc: g.type]
+    )
   end
 
   @doc """

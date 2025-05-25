@@ -4,8 +4,10 @@ defmodule Postmeeting.Repo.Migrations.CreateContentGenerationSettings do
   def change do
     create table(:content_generation_settings) do
       add :name, :string, null: false
-      add :type, :string, null: false  # EMAIL or POST
-      add :platform, :string, null: false  # FACEBOOK, LINKEDIN, or EMAIL
+      # EMAIL or POST
+      add :type, :string, null: false
+      # FACEBOOK, LINKEDIN, or EMAIL
+      add :platform, :string, null: false
       add :description, :text
       add :example, :text
       add :user_id, references(:users, on_delete: :delete_all), null: false

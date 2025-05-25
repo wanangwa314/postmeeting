@@ -37,6 +37,8 @@ defmodule PostmeetingWeb.Router do
 
     live "/calendar", CalendarLive
     live "/settings", UserSettingsLive
+    live "/settings/content", UserSettingsLive, :new_content_setting
+    live "/settings/content/edit", UserSettingsLive, :edit_content_setting
   end
 
   # Enable LiveDashboard in development
