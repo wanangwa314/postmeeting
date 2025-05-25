@@ -92,7 +92,10 @@ config :postmeeting, :recall, api_key: System.get_env("RECALL_API_KEY")
 
 config :postmeeting, Oban,
   repo: Postmeeting.Repo,
-  plugins: [Oban.Plugins.Pruner],
+  plugins: [
+    Oban.Plugins.Pruner,
+    {Oban.Plugins.Cron, crontab: [{"* * * * *", Postmeeting.Workers.ScheduledCalendarSyncWorker}]}
+  ],
   queues: [
     calendar: 10,
     meetings: 10,

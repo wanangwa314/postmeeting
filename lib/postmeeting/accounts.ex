@@ -67,6 +67,13 @@ defmodule Postmeeting.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc """
+  Returns a list of all users.
+  """
+  def list_users do
+    Repo.all(User)
+  end
+
   ## User registration
 
   @doc """
@@ -379,20 +386,31 @@ defmodule Postmeeting.Accounts do
     end
   end
 
-  def create_google_account(user, auth) do
+  def create_or_update_google_account(user, auth) do
+    google_email = auth.info.email
+    existing_account = Repo.get_by(GoogleAccount, user_id: user.id, email: google_email)
+
     attrs = %{
       access_token: auth.credentials.token,
       refresh_token: auth.credentials.refresh_token,
       expires_at: calculate_expiry(auth.credentials.expires_at),
       scope: auth.credentials.scopes |> Enum.join(" "),
-      email: auth.info.email,
+      email: google_email,
       name: auth.info.name || auth.info.nickname,
       user_id: user.id
     }
 
-    %GoogleAccount{}
-    |> GoogleAccount.changeset(attrs)
-    |> Repo.insert()
+    case existing_account do
+      nil ->
+        %GoogleAccount{}
+        |> GoogleAccount.changeset(attrs)
+        |> Repo.insert()
+
+      account ->
+        account
+        |> GoogleAccount.changeset(attrs)
+        |> Repo.update()
+    end
   end
 
   defp calculate_expiry(nil), do: nil

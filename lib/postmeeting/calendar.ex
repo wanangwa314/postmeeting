@@ -12,6 +12,7 @@ defmodule Postmeeting.Calendar do
   def list_events_with_zoom(user) do
     with {:ok, google_account} <- get_google_account(user),
          {:ok, events} <- fetch_events(google_account.access_token) do
+      dbg(events)
       {:ok, filter_zoom_events(events)}
     end
   end
@@ -30,6 +31,12 @@ defmodule Postmeeting.Calendar do
     diff = DateTime.diff(now, datetime, :second)
 
     cond do
+      diff < -31_536_000 -> "in #{div(-diff, 31_536_000)} years"
+      diff < -2_592_000 -> "in #{div(-diff, 2_592_000)} months"
+      diff < -86400 -> "in #{div(-diff, 86400)} days"
+      diff < -3600 -> "in #{div(-diff, 3600)} hours"
+      diff < -60 -> "in #{div(-diff, 60)} minutes"
+      diff < 0 -> "in less than a minute"
       diff < 60 -> "just now"
       diff < 3600 -> "#{div(diff, 60)} minutes ago"
       diff < 86400 -> "#{div(diff, 3600)} hours ago"
@@ -112,14 +119,24 @@ defmodule Postmeeting.Calendar do
     end
   end
 
-  defp filter_zoom_events(%{items: items}) when is_list(items) do
+  defp filter_zoom_events(%{"items" => items}) when is_list(items) do
     Enum.filter(items, &has_zoom_link?/1)
   end
 
   defp filter_zoom_events(_), do: []
 
-  defp has_zoom_link?(%{description: description}) when is_binary(description) do
+  # Updated to handle string keys from Google Calendar API
+  defp has_zoom_link?(%{"description" => description, "location" => location}) do
+    (is_binary(description) && String.match?(description, ~r/zoom\.us\/[jw]\/\d+/i)) ||
+      (is_binary(location) && String.match?(location, ~r/zoom\.us\/[jw]\/\d+/i))
+  end
+
+  defp has_zoom_link?(%{"description" => description}) when is_binary(description) do
     String.match?(description, ~r/zoom\.us\/[jw]\/\d+/i)
+  end
+
+  defp has_zoom_link?(%{"location" => location}) when is_binary(location) do
+    String.match?(location, ~r/zoom\.us\/[jw]\/\d+/i)
   end
 
   defp has_zoom_link?(_), do: false

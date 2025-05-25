@@ -120,8 +120,8 @@ defmodule PostmeetingWeb.AuthController do
 
     case find_or_create_user(user_params) do
       {:ok, user} ->
-        # Create new Google account
-        {:ok, _google_account} = Accounts.create_google_account(user, auth)
+        # Create or update Google account
+        {:ok, _google_account} = Accounts.create_or_update_google_account(user, auth)
 
         conn
         |> put_flash(:info, "Successfully authenticated.")

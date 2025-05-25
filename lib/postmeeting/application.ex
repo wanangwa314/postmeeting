@@ -16,9 +16,10 @@ defmodule Postmeeting.Application do
       {Finch, name: Postmeeting.Finch},
       # Start a worker by calling: Postmeeting.Worker.start_link(arg)
       # {Postmeeting.Worker, arg},
+      # Start Oban
+      {Oban, Application.fetch_env!(:postmeeting, Oban)},
       # Start to serve requests, typically the last entry
-      PostmeetingWeb.Endpoint,
-      {Oban, Application.fetch_env!(:postmeeting, Oban)}
+      PostmeetingWeb.Endpoint
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -70,7 +70,8 @@ defmodule Postmeeting.MixProject do
       # Tesla's recommended HTTP adapter
       {:hackney, "~> 1.17"},
       {:google_api_calendar, "~> 0.26.0"},
-      {:oban, "~> 2.16"}
+      {:oban, "~> 2.16"},
+      {:timex, "~> 3.7"}
     ]
   end
 
