@@ -6,7 +6,14 @@ defmodule Postmeeting.Accounts do
   import Ecto.Query, warn: false
   alias Postmeeting.Repo
 
-  alias Postmeeting.Accounts.{User, UserToken, UserNotifier, GoogleAccount}
+  alias Postmeeting.Accounts.{
+    User,
+    UserToken,
+    UserNotifier,
+    GoogleAccount,
+    LinkedinAccount,
+    FacebookAccount
+  }
 
   ## Database getters
 
@@ -357,6 +364,10 @@ defmodule Postmeeting.Accounts do
     Repo.all(from g in GoogleAccount, where: g.user_id == ^user.id)
   end
 
+  def get_google_account_by_user(user) do
+    Repo.one(from g in GoogleAccount, where: g.user_id == ^user.id)
+  end
+
   def get_google_account(user, id) do
     Repo.get_by(GoogleAccount, user_id: user.id, id: id)
   end
@@ -386,5 +397,99 @@ defmodule Postmeeting.Accounts do
 
   defp calculate_expiry(expires_at) when is_integer(expires_at) do
     DateTime.from_unix!(expires_at)
+  end
+
+  # Helper functions
+  defp get_token_expiry(nil), do: nil
+
+  defp get_token_expiry(expires_at) when is_integer(expires_at) do
+    DateTime.from_unix!(expires_at)
+  end
+
+  defp get_token_expiry(expires_at), do: expires_at
+
+  ## LinkedIn Account Management
+
+  def list_linkedin_accounts(user) do
+    Repo.all(from l in LinkedinAccount, where: l.user_id == ^user.id)
+  end
+
+  def get_linkedin_account(user, id) do
+    Repo.get_by(LinkedinAccount, user_id: user.id, id: id)
+  end
+
+  def get_linkedin_account_by_user(user) do
+    Repo.one(from l in LinkedinAccount, where: l.user_id == ^user.id)
+  end
+
+  def disconnect_linkedin_account(user, account_id) do
+    case get_linkedin_account(user, account_id) do
+      nil -> {:error, :not_found}
+      account -> Repo.delete(account)
+    end
+  end
+
+  def create_linkedin_account(user, auth) do
+    case get_linkedin_account_by_user(user) do
+      nil ->
+        %LinkedinAccount{}
+        |> LinkedinAccount.changeset(%{
+          access_token: auth.credentials.token,
+          linkedin_id: auth.uid,
+          name: auth.info.name || "#{auth.info.first_name} #{auth.info.last_name}",
+          email: auth.info.email,
+          user_id: user.id
+        })
+        |> Repo.insert()
+
+      _existing ->
+        {:error, :already_connected}
+    end
+  end
+
+  ## Facebook Account Management
+
+  def list_facebook_accounts(user) do
+    Repo.all(from g in FacebookAccount, where: g.user_id == ^user.id)
+  end
+
+  def get_facebook_account(user, id) do
+    Repo.get_by(FacebookAccount, user_id: user.id, id: id)
+  end
+
+  def get_facebook_account_by_facebook_id(facebook_id) do
+    Repo.get_by(FacebookAccount, facebook_id: facebook_id)
+  end
+
+  def disconnect_facebook_account(user, account_id) do
+    case get_facebook_account(user, account_id) do
+      nil -> {:error, :not_found}
+      account -> Repo.delete(account)
+    end
+  end
+
+  def create_facebook_account(user, auth) do
+    case get_facebook_account_by_user(user) do
+      nil ->
+        attrs = %{
+          access_token: auth.credentials.token,
+          expires_at: get_token_expiry(auth.credentials.expires_at),
+          facebook_id: auth.uid,
+          name: auth.info.name,
+          email: auth.info.email,
+          user_id: user.id
+        }
+
+        %FacebookAccount{}
+        |> FacebookAccount.changeset(attrs)
+        |> Repo.insert()
+
+      _account ->
+        {:error, :already_connected}
+    end
+  end
+
+  def get_facebook_account_by_user(user) do
+    Repo.one(from f in FacebookAccount, where: f.user_id == ^user.id)
   end
 end

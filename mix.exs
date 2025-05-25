@@ -59,9 +59,17 @@ defmodule Postmeeting.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      # Add Google OAuth deps
+      # Social OAuth deps
       {:ueberauth, "~> 0.10"},
-      {:ueberauth_google, "~> 0.12"}
+      {:ueberauth_google, "~> 0.12"},
+      {:ueberauth_facebook, "~> 0.10"},
+      # For direct LinkedIn OAuth2
+      {:oauth2, "~> 2.1"},
+      # For HTTP requests
+      {:tesla, "~> 1.7"},
+      # Tesla's recommended HTTP adapter
+      {:hackney, "~> 1.17"},
+      {:google_api_calendar, "~> 0.26.0"}
     ]
   end
 

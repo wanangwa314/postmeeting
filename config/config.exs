@@ -70,6 +70,11 @@ config :ueberauth, Ueberauth,
          default_scope: "email profile https://www.googleapis.com/auth/calendar.readonly",
          prompt: "consent",
          access_type: "offline"
+       ]},
+    facebook:
+      {Ueberauth.Strategy.Facebook,
+       [
+         default_scope: "email,public_profile,pages_manage_posts,publish_actions"
        ]}
   ]
 
@@ -77,6 +82,10 @@ config :ueberauth, Ueberauth,
 config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_id: "1085518600345-gdejvt7bmi752nuf2gdl4jhep8nco9pe.apps.googleusercontent.com",
   client_secret: "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"
+
+config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
+  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
+  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
