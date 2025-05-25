@@ -12,9 +12,10 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
         # Extract meeting details - using string keys
         start_time = parse_event_time(event["start"])
 
-        # Try to extract meeting link and platform from description first, then location
+        # Use the enhanced meeting link extraction that checks all possible locations
         meeting_info =
-          Calendar.extract_meeting_link_with_platform(event["description"]) ||
+          Calendar.extract_event_meeting_link_with_platform(event) ||
+            Calendar.extract_meeting_link_with_platform(event["description"]) ||
             Calendar.extract_meeting_link_with_platform(event["location"])
 
         # If meeting link and platform are found, create/update the meeting
@@ -30,7 +31,13 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
             # Use meeting_link as the meeting_link
             meeting_link: meeting_link,
             # Set the platform type
-            platform_type: platform_type
+            platform_type: platform_type,
+            # Store additional event metadata
+            calendar_event_id: event["id"],
+            description: event["description"],
+            location: event["location"],
+            attendees: extract_attendees_from_raw_event(event),
+            organizer_email: get_in(event, ["organizer", "email"])
           }
 
           # Check if a meeting with this link already exists
@@ -53,7 +60,16 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
               end
 
             existing ->
-              Logger.info("Meeting with link #{meeting_link} already exists: #{existing.id}")
+              # Update existing meeting with latest information
+              case Meeting.changeset(existing, meeting_params) |> Repo.update() do
+                {:ok, updated_meeting} ->
+                  Logger.info("Updated existing meeting: #{updated_meeting.id} with latest info")
+
+                {:error, changeset} ->
+                  Logger.error(
+                    "Failed to update meeting: #{inspect(changeset.errors)} for event: #{event["summary"]}"
+                  )
+              end
           end
         else
           Logger.info("Skipping event without a meeting link: #{event["summary"]}")
@@ -76,6 +92,7 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
   defp schedule_bot_creation(meeting) do
     now = DateTime.utc_now()
     start_time = meeting.start_time
+
     # Schedule 5 minutes before meeting
     schedule_time = DateTime.add(start_time, -5 * 60, :second)
 
@@ -104,4 +121,21 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
   end
 
   defp parse_event_time(_), do: nil
+
+  # Extract attendees from raw Google Calendar event
+  defp extract_attendees_from_raw_event(event) do
+    case Map.get(event, "attendees") do
+      nil ->
+        []
+
+      attendees when is_list(attendees) ->
+        Enum.map(attendees, fn attendee ->
+          Map.get(attendee, "email")
+        end)
+        |> Enum.filter(&(&1 != nil))
+
+      _ ->
+        []
+    end
+  end
 end
