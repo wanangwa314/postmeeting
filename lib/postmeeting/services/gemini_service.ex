@@ -4,7 +4,7 @@ defmodule Postmeeting.Services.GeminiService do
 
   # TODO: Move API Key to application configuration (e.g., config/config.exs or environment variables)
   # For now, using the provided key or an environment variable.
-  @gemini_api_key System.get_env("GEMINI_API_KEY") || "AIzaSyCaz0lJBVIY-4DdpJjFItb51pLNY"
+  @gemini_api_key System.get_env("GEMINI_API_KEY") || "AIzaSyCaz0lJBVIYpxE2Lh-4DdpJjFItb51pLNY"
   @gemini_base_url "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash"
 
   @doc """
@@ -17,6 +17,15 @@ defmodule Postmeeting.Services.GeminiService do
 
 #{transcript_text}"
 
+    generate_content(prompt)
+    |> dbg()
+  end
+
+  @doc """
+  Generates content based on the provided prompt using the Gemini API.
+  Uses Tesla with Hackney adapter.
+  """
+  def generate_content(prompt) do
     body = %{
       "contents" => [
         %{
@@ -27,15 +36,18 @@ defmodule Postmeeting.Services.GeminiService do
       ]
     }
 
+    middleware = [
+      {Tesla.Middleware.BaseUrl, @gemini_base_url},
+      Tesla.Middleware.JSON
+    ]
+
     client =
       Tesla.client(
-        [Tesla.Middleware.BaseUrl, Tesla.Middleware.JSON],
-        adapter: {Tesla.Adapter.Hackney, [recv_timeout: 30_000, connect_timeout: 15_000]}
+        middleware,
+        {Tesla.Adapter.Hackney, [recv_timeout: 30_000, connect_timeout: 15_000]}
       )
 
-    url = @gemini_base_url <> ":generateContent?key=" <> @gemini_api_key
-
-    case Tesla.post(client, url, body) do
+    case Tesla.post(client, ":generateContent?key=#{@gemini_api_key}", body) do
       {:ok, %Tesla.Env{status: 200, body: resp_body}} ->
         # resp_body is already decoded by Tesla.Middleware.JSON
         handle_successful_response(resp_body)

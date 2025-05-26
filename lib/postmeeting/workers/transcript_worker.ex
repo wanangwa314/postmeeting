@@ -42,8 +42,8 @@ defmodule Postmeeting.Workers.TranscriptWorker do
   end
 
   defp fetch_and_process_transcript(meeting, bot_id, job) do
-    case Recall.get_transcript(bot_id) do
-      {:ok, %{"transcript" => transcript}} when is_list(transcript) and length(transcript) > 0 ->
+    case Recall.get_transcript(bot_id) |> dbg() do
+      {:ok, transcript} when is_list(transcript) and length(transcript) > 0 ->
         # We have a non-empty transcript
         Logger.info(
           "Transcript received for meeting #{meeting.id}, #{length(transcript)} segments"
@@ -78,10 +78,6 @@ defmodule Postmeeting.Workers.TranscriptWorker do
       {:ok, %{"transcript" => nil}} ->
         # Null transcript - reschedule
         Logger.info("Null transcript for meeting #{meeting.id}, rescheduling check")
-        reschedule_transcript_check(meeting.id, job)
-
-      {:ok, _response} ->
-        reschedule_transcript_check(meeting.id, job)
 
       {:error, %{status: 404}} ->
         # Bot not found or transcript not available yet - reschedule

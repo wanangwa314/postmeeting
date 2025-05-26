@@ -56,9 +56,14 @@ defmodule Postmeeting.Workers.ContentGenerationWorker do
     # Convert transcript to string if it's a map
     transcript_text = extract_transcript_text(meeting.transcript)
 
-    # Use the generation setting's prompt template
+    # Build prompt from generation setting's description and example
     prompt = """
-    #{generation_setting.prompt}
+    Task: Generate content for #{platform} based on the following requirements:
+
+    #{generation_setting.description}
+
+    Example format:
+    #{generation_setting.example}
 
     Meeting Details:
     - Name: #{meeting.name}
@@ -66,9 +71,11 @@ defmodule Postmeeting.Workers.ContentGenerationWorker do
 
     Meeting Transcript:
     #{transcript_text}
+
+    Please generate content that follows the description and example format provided above.
     """
 
-    case GeminiService.generate_content(prompt) do
+    case GeminiService.generate_content(prompt) |> dbg() do
       {:ok, generated_content} ->
         Logger.info("Successfully generated #{platform} content for meeting #{meeting.id}")
         {platform, {:ok, generated_content}}
@@ -114,7 +121,7 @@ defmodule Postmeeting.Workers.ContentGenerationWorker do
       results
       |> Enum.reduce(%{}, fn
         {platform, {:ok, content}}, acc ->
-          case platform do
+          case String.downcase(platform) do
             "email" -> Map.put(acc, :email, content)
             "facebook" -> Map.put(acc, :facebook_post, content)
             "linkedin" -> Map.put(acc, :linkedin_post, content)
@@ -131,16 +138,15 @@ defmodule Postmeeting.Workers.ContentGenerationWorker do
     case meeting
          |> Meeting.changeset(update_attrs)
          |> Repo.update() do
-      {:ok, updated_meeting} ->
-        # More than just status
-        if map_size(update_attrs) > 1 do
-          content_types = update_attrs |> Map.delete(:status) |> Map.keys() |> Enum.join(", ")
+      {:ok, _updated_meeting} ->
+        content_keys = Map.keys(update_attrs) -- [:status]
 
+        if length(content_keys) > 0 do
           Logger.info(
-            "Successfully updated meeting #{meeting.id} with generated content: #{content_types} and marked as completed"
+            "Successfully updated meeting #{meeting.id} with generated content: #{Enum.join(content_keys, ", ")} and marked as completed"
           )
         else
-          Logger.info("Meeting #{meeting.id} marked as completed (no content generated)")
+          Logger.info("Meeting #{meeting.id} marked as completed with no additional content")
         end
 
         :ok
