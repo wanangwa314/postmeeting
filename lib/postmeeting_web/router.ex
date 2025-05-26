@@ -36,6 +36,7 @@ defmodule PostmeetingWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live "/calendar", CalendarLive
+    live "/meetings/:id", MeetingDetailLive
     live "/settings", UserSettingsLive
     live "/settings/content", UserSettingsLive, :new_content_setting
     live "/settings/content/edit", UserSettingsLive, :edit_content_setting

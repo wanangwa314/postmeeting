@@ -33,4 +33,13 @@ defmodule Postmeeting.Meetings do
       completed_with_transcripts: completed_meetings_with_transcripts
     }
   end
+
+  def get_user_meeting(user_id, meeting_id) do
+    # Assuming you have a Meeting schema and repo
+    # Adjust this query based on your actual schema structure
+    from(m in Meeting,
+      where: m.user_id == ^user_id and m.id == ^meeting_id
+    )
+    |> Repo.one()
+  end
 end

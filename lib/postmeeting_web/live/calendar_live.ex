@@ -148,6 +148,11 @@ defmodule PostmeetingWeb.CalendarLive do
     """
   end
 
+  @impl true
+  def handle_event("view_details", %{"id" => meeting_id}, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/meetings/#{meeting_id}")}
+  end
+
   # Helper functions for formatting
   defp format_date(datetime) when is_struct(datetime, DateTime) do
     datetime
