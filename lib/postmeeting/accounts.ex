@@ -368,26 +368,39 @@ defmodule Postmeeting.Accounts do
   ## Google Account Management
 
   def list_google_accounts(user) do
-    Repo.all(from g in GoogleAccount,
-      where: g.user_id == ^user.id and g.calendar_sync_enabled == true)
+    Repo.all(
+      from(g in GoogleAccount,
+        where: g.user_id == ^user.id and g.calendar_sync_enabled == true
+      )
+    )
   end
 
   def list_all_google_accounts(user) do
-    Repo.all(from g in GoogleAccount, where: g.user_id == ^user.id)
+    Repo.all(from(g in GoogleAccount, where: g.user_id == ^user.id))
   end
 
   def get_google_account_by_user(user) do
     # First try to get the primary account with calendar sync enabled
-    primary_account = Repo.one(from g in GoogleAccount,
-      where: g.user_id == ^user.id and g.calendar_sync_enabled == true and g.is_primary == true)
+    primary_account =
+      Repo.one(
+        from(g in GoogleAccount,
+          where:
+            g.user_id == ^user.id and g.calendar_sync_enabled == true and g.is_primary == true
+        )
+      )
 
     case primary_account do
       nil ->
         # If no primary account found, get any calendar sync enabled account
-        Repo.one(from g in GoogleAccount,
-          where: g.user_id == ^user.id and g.calendar_sync_enabled == true,
-          limit: 1)
-      account -> account
+        Repo.one(
+          from(g in GoogleAccount,
+            where: g.user_id == ^user.id and g.calendar_sync_enabled == true,
+            limit: 1
+          )
+        )
+
+      account ->
+        account
     end
   end
 
@@ -397,20 +410,29 @@ defmodule Postmeeting.Accounts do
 
   def disconnect_google_account(user, account_id) do
     case get_google_account(user, account_id) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       account ->
         if account.is_primary do
           # Get all non-primary accounts
-          other_accounts = Repo.all(from g in GoogleAccount,
-            where: g.user_id == ^user.id and g.id != ^account.id)
-          
+          other_accounts =
+            Repo.all(
+              from(g in GoogleAccount,
+                where: g.user_id == ^user.id and g.id != ^account.id
+              )
+            )
+
           # If there are other accounts, make the first one primary
           case other_accounts do
             [next_primary | _] ->
               {:ok, _} = update_google_account(next_primary, %{is_primary: true})
-            [] -> :ok
+
+            [] ->
+              :ok
           end
         end
+
         Repo.delete(account)
     end
   end
@@ -449,8 +471,9 @@ defmodule Postmeeting.Accounts do
             email: auth.info.email,
             access_token: auth.credentials.token,
             refresh_token: auth.credentials.refresh_token,
-            expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
-            scope: auth.credentials.scope,
+            expires_at:
+              auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+            scope: auth.credentials.scopes,
             is_primary: true,
             calendar_sync_enabled: true
           })
@@ -467,7 +490,7 @@ defmodule Postmeeting.Accounts do
   Gets the primary Google account for a user.
   """
   def get_primary_google_account(user) do
-    Repo.one(from g in GoogleAccount, where: g.user_id == ^user.id and g.is_primary == true)
+    Repo.one(from(g in GoogleAccount, where: g.user_id == ^user.id and g.is_primary == true))
   end
 
   @doc """
@@ -500,7 +523,8 @@ defmodule Postmeeting.Accounts do
           email: auth.info.email,
           access_token: auth.credentials.token,
           refresh_token: auth.credentials.refresh_token,
-          expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+          expires_at:
+            auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
           scope: Enum.join(auth.credentials.scopes, " "),
           is_primary: false,
           calendar_sync_enabled: true
@@ -524,7 +548,8 @@ defmodule Postmeeting.Accounts do
           email: auth.info.email,
           access_token: auth.credentials.token,
           refresh_token: auth.credentials.refresh_token,
-          expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+          expires_at:
+            auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
           scope: Enum.join(auth.credentials.scopes, " ")
         })
         |> Repo.insert()
@@ -546,7 +571,8 @@ defmodule Postmeeting.Accounts do
           email: auth.info.email,
           access_token: auth.credentials.token,
           refresh_token: auth.credentials.refresh_token,
-          expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+          expires_at:
+            auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
           scope: Enum.join(auth.credentials.scopes, " ")
         })
         |> Repo.insert()
@@ -620,7 +646,7 @@ defmodule Postmeeting.Accounts do
   ## LinkedIn Account Management
 
   def list_linkedin_accounts(user) do
-    Repo.all(from l in LinkedinAccount, where: l.user_id == ^user.id)
+    Repo.all(from(l in LinkedinAccount, where: l.user_id == ^user.id))
   end
 
   def get_linkedin_account(user, id) do
@@ -628,7 +654,7 @@ defmodule Postmeeting.Accounts do
   end
 
   def get_linkedin_account_by_user(user) do
-    Repo.one(from l in LinkedinAccount, where: l.user_id == ^user.id)
+    Repo.one(from(l in LinkedinAccount, where: l.user_id == ^user.id))
   end
 
   def disconnect_linkedin_account(user, account_id) do
@@ -659,7 +685,7 @@ defmodule Postmeeting.Accounts do
   ## Facebook Account Management
 
   def list_facebook_accounts(user) do
-    Repo.all(from g in FacebookAccount, where: g.user_id == ^user.id)
+    Repo.all(from(g in FacebookAccount, where: g.user_id == ^user.id))
   end
 
   def get_facebook_account(user, id) do
@@ -699,6 +725,6 @@ defmodule Postmeeting.Accounts do
   end
 
   def get_facebook_account_by_user(user) do
-    Repo.one(from f in FacebookAccount, where: f.user_id == ^user.id)
+    Repo.one(from(f in FacebookAccount, where: f.user_id == ^user.id))
   end
 end
