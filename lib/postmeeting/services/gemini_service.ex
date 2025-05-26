@@ -2,7 +2,7 @@ defmodule Postmeeting.Services.GeminiService do
   alias Tesla
   alias Jason
 
-  @gemini_api_key Application.compile_env(:postmeeting, [:api_keys, :gemini])
+  @gemini_api_key System.get_env("GEMINI_API_KEY")
   @gemini_base_url "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash"
 
   @doc """

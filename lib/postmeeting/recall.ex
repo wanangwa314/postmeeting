@@ -8,13 +8,13 @@ defmodule Postmeeting.Recall do
   @base_url "https://api.recall.ai/api/v1"
 
   # Tesla middleware setup
-  plug Tesla.Middleware.BaseUrl, @base_url
+  plug(Tesla.Middleware.BaseUrl, @base_url)
 
-  plug Tesla.Middleware.Headers, [
-    {"authorization", "Token " <> (Application.get_env(:postmeeting, :recall)[:api_key] || "")}
-  ]
+  plug(Tesla.Middleware.Headers, [
+    {"authorization", "Token " <> (System.get_env("RECALL_API_KEY") || "")}
+  ])
 
-  plug Tesla.Middleware.JSON
+  plug(Tesla.Middleware.JSON)
 
   @doc """
   Creates a new bot for a video call.

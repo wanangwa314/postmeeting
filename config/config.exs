@@ -20,16 +20,6 @@ config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
   client_id: System.get_env("FACEBOOK_CLIENT_ID"),
   client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
 
-config :postmeeting, :linkedin,
-  client_id: System.get_env("LINKEDIN_CLIENT_ID"),
-  client_secret: System.get_env("LINKEDIN_CLIENT_SECRET"),
-  redirect_uri: System.get_env("LINKEDIN_REDIRECT_URI")
-
-# API Keys
-config :postmeeting, :api_keys,
-  recall: System.get_env("RECALL_API_KEY"),
-  gemini: System.get_env("GEMINI_API_KEY")
-
 # Configures the endpoint
 config :postmeeting, PostmeetingWeb.Endpoint,
   url: [host: "localhost"],
@@ -96,18 +86,6 @@ config :ueberauth, Ueberauth,
          default_scope: "email,public_profile"
        ]}
   ]
-
-# Configure Google OAuth
-config :ueberauth, Ueberauth.Strategy.Google.OAuth,
-  client_id: "1085518600345-gdejvt7bmi752nuf2gdl4jhep8nco9pe.apps.googleusercontent.com",
-  client_secret: "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"
-
-config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
-  client_id: "617452034083152",
-  client_secret: "9d1207ed512d8968fa1b1d4c565559d6"
-
-# Configure Recall.ai
-config :postmeeting, :recall, api_key: "a9020bfae28aaf581cf44b9f8fafb7b1b6432323"
 
 config :postmeeting, Oban,
   repo: Postmeeting.Repo,

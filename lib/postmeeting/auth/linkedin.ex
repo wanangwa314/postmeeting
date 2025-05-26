@@ -4,9 +4,9 @@ defmodule Postmeeting.Auth.LinkedIn do
   def client do
     OAuth2.Client.new(
       strategy: __MODULE__,
-      client_id: Application.get_env(:postmeeting, :linkedin)[:client_id],
-      client_secret: Application.get_env(:postmeeting, :linkedin)[:client_secret],
-      redirect_uri: Application.get_env(:postmeeting, :linkedin)[:redirect_uri],
+      client_id: System.get_env("LINKEDIN_CLIENT_ID"),
+      client_secret: System.get_env("LINKEDIN_CLIENT_SECRET"),
+      redirect_uri: System.get_env("LINKEDIN_REDIRECT_URI"),
       site: "https://api.linkedin.com",
       authorize_url: "https://www.linkedin.com/oauth/v2/authorization",
       token_url: "https://www.linkedin.com/oauth/v2/accessToken"
