@@ -4,9 +4,9 @@ defmodule Postmeeting.Auth.LinkedIn do
   def client do
     OAuth2.Client.new(
       strategy: __MODULE__,
-      client_id: System.get_env("LINKEDIN_CLIENT_ID"),
-      client_secret: System.get_env("LINKEDIN_CLIENT_SECRET"),
-      redirect_uri: System.get_env("LINKEDIN_REDIRECT_URI"),
+      client_id: "777mxi0h3gc320",
+      client_secret: "WPL_AP1.9kWK6MtPZIfLGfRD.Xr5aSg==",
+      redirect_uri: "http://localhost:4000/auth/linkedin/callback",
       site: "https://api.linkedin.com",
       authorize_url: "https://www.linkedin.com/oauth/v2/authorization",
       token_url: "https://www.linkedin.com/oauth/v2/accessToken"

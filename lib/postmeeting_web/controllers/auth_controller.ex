@@ -1,10 +1,10 @@
 defmodule PostmeetingWeb.AuthController do
   use PostmeetingWeb, :controller
   plug Ueberauth
-  
+
   alias Postmeeting.Accounts
   alias PostmeetingWeb.UserAuth
-  alias Postmeeting.Auth.{LinkedIn, Google, Facebook}
+  alias Postmeeting.Auth.LinkedIn
 
   # Only allow Google for initial login
   def login(conn, _params) do
@@ -61,16 +61,16 @@ defmodule PostmeetingWeb.AuthController do
 
     case conn.assigns[:current_user] do
       nil ->
-        # First time Google login - create user and primary Google account
+        # First time Google login or returning user
         case Accounts.create_user_with_google(user_params, auth) do
           {:ok, user} ->
             conn
-            |> put_flash(:info, "Welcome! Account created successfully.")
+            |> put_flash(:info, "Welcome back! Successfully logged in.")
             |> UserAuth.log_in_user(user)
 
           {:error, _reason} ->
             conn
-            |> put_flash(:error, "Error creating account.")
+            |> put_flash(:error, "Error authenticating with Google.")
             |> redirect(to: ~p"/")
         end
 
@@ -85,6 +85,12 @@ defmodule PostmeetingWeb.AuthController do
           {:error, :already_connected} ->
             conn
             |> put_flash(:error, "This Google account is already connected.")
+            |> redirect(to: ~p"/calendar")
+
+          {:error, reason} ->
+            dbg(reason)
+            conn
+            |> put_flash(:error, "Error connecting Google Calendar account.")
             |> redirect(to: ~p"/calendar")
         end
     end
@@ -102,12 +108,17 @@ defmodule PostmeetingWeb.AuthController do
           {:ok, _linkedin_account} ->
             conn
             |> put_flash(:info, "Successfully connected LinkedIn for posting.")
-            |> redirect(to: ~p"/social")
+            |> redirect(to: ~p"/settings")
 
           {:error, :already_connected} ->
             conn
             |> put_flash(:error, "This LinkedIn account is already connected.")
-            |> redirect(to: ~p"/social")
+            |> redirect(to: ~p"/settings")
+
+          {:error, _reason} ->
+            conn
+            |> put_flash(:error, "Error connecting LinkedIn account.")
+            |> redirect(to: ~p"/settings")
         end
     end
   end
@@ -124,19 +135,25 @@ defmodule PostmeetingWeb.AuthController do
           {:ok, _facebook_account} ->
             conn
             |> put_flash(:info, "Successfully connected Facebook for posting.")
-            |> redirect(to: ~p"/social")
+            |> redirect(to: ~p"/settings")
 
           {:error, :already_connected} ->
             conn
-            |> put_flash(:error, "This user already has a connected Facebook account.")
-            |> redirect(to: ~p"/")
-        end
+            |> put_flash(:error, "This Facebook account is already connected.")
+            |> redirect(to: ~p"/settings")
 
-      {:error, _reason} ->
-        conn
-        |> put_flash(:error, "Error authenticating with Facebook.")
-        |> redirect(to: ~p"/")
+          {:error, _reason} ->
+            conn
+            |> put_flash(:error, "Error connecting Facebook account.")
+            |> redirect(to: ~p"/settings")
+        end
     end
+  end
+
+  def callback(%{assigns: %{ueberauth_auth: _auth}} = conn, _params) do
+    conn
+    |> put_flash(:error, "Unsupported authentication provider.")
+    |> redirect(to: ~p"/")
   end
 
   # Keep existing Ueberauth callback handler for other providers

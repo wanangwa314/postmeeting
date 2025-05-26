@@ -13,7 +13,7 @@ defmodule PostmeetingWeb.UserSettingsLive do
     socket =
       socket
       |> assign(:page_title, "Settings")
-      |> assign(:google_accounts, Accounts.list_google_accounts(user))
+      |> assign(:google_accounts, Accounts.list_all_google_accounts(user))
       |> assign(:facebook_accounts, Accounts.list_facebook_accounts(user))
       |> assign(:linkedin_accounts, Accounts.list_linkedin_accounts(user))
       |> assign(:calendar_events, get_calendar_events(user))
@@ -93,7 +93,7 @@ defmodule PostmeetingWeb.UserSettingsLive do
         {:noreply,
          socket
          |> put_flash(:info, "Google Calendar account disconnected successfully.")
-         |> assign(:google_accounts, Accounts.list_google_accounts(socket.assigns.current_user))
+         |> assign(:google_accounts, Accounts.list_all_google_accounts(socket.assigns.current_user))
          |> assign(:calendar_events, [])}
 
       {:error, _} ->

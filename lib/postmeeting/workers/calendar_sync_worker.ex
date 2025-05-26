@@ -79,6 +79,8 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
         Logger.error("User #{user_id} not found")
         {:error, :user_not_found}
 
+      {:error, :no_events} ->
+        Logger.info("No calendar events found for user #{user_id}")
       {:error, reason} ->
         Logger.error("Failed to fetch calendar events: #{inspect(reason)}")
         {:error, reason}

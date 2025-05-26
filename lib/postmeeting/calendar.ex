@@ -11,9 +11,18 @@ defmodule Postmeeting.Calendar do
   Returns raw Google Calendar events for backward compatibility.
   """
   def list_events_with_meeting_links(user) do
-    with {:ok, google_account} <- get_google_account(user),
-         {:ok, events} <- fetch_events(google_account.access_token) do
-      {:ok, filter_meeting_events(events)}
+    google_accounts = get_google_accounts(user)
+
+    all_events = Enum.reduce(google_accounts, [], fn account, acc ->
+      case fetch_events(account.access_token) do
+        {:ok, %{"items" => items}} when is_list(items) -> acc ++ items
+        _ -> acc
+      end
+    end)
+
+    case all_events do
+      [] -> {:error, :no_events}
+      events -> {:ok, filter_meeting_events(events)}
     end
   end
 
@@ -22,14 +31,23 @@ defmodule Postmeeting.Calendar do
   Fetches events from the past week up to 1 month in the future.
   """
   def list_structured_events_with_meeting_links(user) do
-    with {:ok, google_account} <- get_google_account(user),
-         {:ok, events} <- fetch_events(google_account.access_token) do
-      structured_events =
-        events
-        |> filter_meeting_events()
-        |> Enum.map(&extract_event_info/1)
+    google_accounts = get_google_accounts(user)
 
-      {:ok, structured_events}
+    all_events = Enum.reduce(google_accounts, [], fn account, acc ->
+      case fetch_events(account.access_token) do
+        {:ok, %{"items" => items}} when is_list(items) -> acc ++ items
+        _ -> acc
+      end
+    end)
+
+    case all_events do
+      [] -> {:error, :no_events}
+      events ->
+        structured_events =
+          events
+          |> filter_meeting_events()
+          |> Enum.map(&extract_event_info/1)
+        {:ok, structured_events}
     end
   end
 
@@ -238,11 +256,8 @@ defmodule Postmeeting.Calendar do
 
   # Private functions
 
-  defp get_google_account(user) do
-    case Accounts.get_google_account_by_user(user) do
-      nil -> {:error, :no_google_account}
-      account -> {:ok, account}
-    end
+  defp get_google_accounts(user) do
+    Accounts.list_google_accounts(user)
   end
 
   defp fetch_events(access_token) do

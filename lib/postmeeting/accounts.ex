@@ -368,11 +368,27 @@ defmodule Postmeeting.Accounts do
   ## Google Account Management
 
   def list_google_accounts(user) do
+    Repo.all(from g in GoogleAccount,
+      where: g.user_id == ^user.id and g.calendar_sync_enabled == true)
+  end
+
+  def list_all_google_accounts(user) do
     Repo.all(from g in GoogleAccount, where: g.user_id == ^user.id)
   end
 
   def get_google_account_by_user(user) do
-    Repo.one(from g in GoogleAccount, where: g.user_id == ^user.id)
+    # First try to get the primary account with calendar sync enabled
+    primary_account = Repo.one(from g in GoogleAccount,
+      where: g.user_id == ^user.id and g.calendar_sync_enabled == true and g.is_primary == true)
+
+    case primary_account do
+      nil ->
+        # If no primary account found, get any calendar sync enabled account
+        Repo.one(from g in GoogleAccount,
+          where: g.user_id == ^user.id and g.calendar_sync_enabled == true,
+          limit: 1)
+      account -> account
+    end
   end
 
   def get_google_account(user, id) do
@@ -382,7 +398,20 @@ defmodule Postmeeting.Accounts do
   def disconnect_google_account(user, account_id) do
     case get_google_account(user, account_id) do
       nil -> {:error, :not_found}
-      account -> Repo.delete(account)
+      account ->
+        if account.is_primary do
+          # Get all non-primary accounts
+          other_accounts = Repo.all(from g in GoogleAccount,
+            where: g.user_id == ^user.id and g.id != ^account.id)
+          
+          # If there are other accounts, make the first one primary
+          case other_accounts do
+            [next_primary | _] ->
+              {:ok, _} = update_google_account(next_primary, %{is_primary: true})
+            [] -> :ok
+          end
+        end
+        Repo.delete(account)
     end
   end
 
@@ -390,6 +419,141 @@ defmodule Postmeeting.Accounts do
     google_account
     |> GoogleAccount.changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+  Creates a user with a primary Google account or logs in an existing user.
+  """
+  def create_user_with_google(user_params, auth) do
+    case get_user_by_email(user_params.email) do
+      # User exists, ensure they have a Google account
+      %User{} = user ->
+        case get_primary_google_account(user) do
+          nil ->
+            # Add Google account as primary
+            create_primary_google_account(user, auth)
+            {:ok, user}
+
+          _google_account ->
+            # User already has a primary Google account
+            {:ok, user}
+        end
+
+      nil ->
+        # Create new user and primary Google account
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(:user, User.registration_changeset(%User{}, user_params))
+        |> Ecto.Multi.insert(:google_account, fn %{user: user} ->
+          GoogleAccount.changeset(%GoogleAccount{}, %{
+            user_id: user.id,
+            email: auth.info.email,
+            access_token: auth.credentials.token,
+            refresh_token: auth.credentials.refresh_token,
+            expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+            scope: auth.credentials.scope,
+            is_primary: true,
+            calendar_sync_enabled: true
+          })
+        end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{user: user}} -> {:ok, user}
+          {:error, _, changeset, _} -> {:error, changeset}
+        end
+    end
+  end
+
+  @doc """
+  Gets the primary Google account for a user.
+  """
+  def get_primary_google_account(user) do
+    Repo.one(from g in GoogleAccount, where: g.user_id == ^user.id and g.is_primary == true)
+  end
+
+  @doc """
+  Creates a primary Google account for an existing user.
+  """
+  def create_primary_google_account(user, auth) do
+    %GoogleAccount{}
+    |> GoogleAccount.changeset(%{
+      user_id: user.id,
+      email: auth.info.email,
+      access_token: auth.credentials.token,
+      refresh_token: auth.credentials.refresh_token,
+      expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+      scope: Enum.join(auth.credentials.scopes, " "),
+      is_primary: true,
+      calendar_sync_enabled: true
+    })
+    |> Repo.insert()
+  end
+
+  @doc """
+  Adds an additional Google account for calendar sync.
+  """
+  def add_google_calendar_account(user, auth) do
+    case Repo.get_by(GoogleAccount, email: auth.info.email) do
+      nil ->
+        %GoogleAccount{}
+        |> GoogleAccount.changeset(%{
+          user_id: user.id,
+          email: auth.info.email,
+          access_token: auth.credentials.token,
+          refresh_token: auth.credentials.refresh_token,
+          expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+          scope: Enum.join(auth.credentials.scopes, " "),
+          is_primary: false,
+          calendar_sync_enabled: true
+        })
+        |> Repo.insert()
+
+      _account ->
+        {:error, :already_connected}
+    end
+  end
+
+  @doc """
+  Adds a LinkedIn account for posting.
+  """
+  def add_linkedin_account(user, auth) do
+    case Repo.get_by(LinkedinAccount, email: auth.info.email) do
+      nil ->
+        %LinkedinAccount{}
+        |> LinkedinAccount.changeset(%{
+          user_id: user.id,
+          email: auth.info.email,
+          access_token: auth.credentials.token,
+          refresh_token: auth.credentials.refresh_token,
+          expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+          scope: Enum.join(auth.credentials.scopes, " ")
+        })
+        |> Repo.insert()
+
+      _account ->
+        {:error, :already_connected}
+    end
+  end
+
+  @doc """
+  Adds a Facebook account for posting.
+  """
+  def add_facebook_account(user, auth) do
+    case Repo.get_by(FacebookAccount, email: auth.info.email) do
+      nil ->
+        %FacebookAccount{}
+        |> FacebookAccount.changeset(%{
+          user_id: user.id,
+          email: auth.info.email,
+          access_token: auth.credentials.token,
+          refresh_token: auth.credentials.refresh_token,
+          expires_at: auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
+          scope: Enum.join(auth.credentials.scopes, " ")
+        })
+        |> Repo.insert()
+
+      _account ->
+        {:error, :already_connected}
+    end
   end
 
   def list_google_accounts_expiring_soon(threshold_datetime) do
