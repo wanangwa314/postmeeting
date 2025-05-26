@@ -2,9 +2,7 @@ defmodule Postmeeting.Services.GeminiService do
   alias Tesla
   alias Jason
 
-  # TODO: Move API Key to application configuration (e.g., config/config.exs or environment variables)
-  # For now, using the provided key or an environment variable.
-  @gemini_api_key System.get_env("GEMINI_API_KEY") || "AIzaSyCaz0lJBVIYpxE2Lh-4DdpJjFItb51pLNY"
+  @gemini_api_key Application.compile_env(:postmeeting, [:api_keys, :gemini])
   @gemini_base_url "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash"
 
   @doc """

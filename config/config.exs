@@ -11,6 +11,25 @@ config :postmeeting,
   ecto_repos: [Postmeeting.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# OAuth Configurations
+config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+  client_id: System.get_env("GOOGLE_CLIENT_ID"),
+  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
+  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
+  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+
+config :postmeeting, :linkedin,
+  client_id: System.get_env("LINKEDIN_CLIENT_ID"),
+  client_secret: System.get_env("LINKEDIN_CLIENT_SECRET"),
+  redirect_uri: System.get_env("LINKEDIN_REDIRECT_URI")
+
+# API Keys
+config :postmeeting, :api_keys,
+  recall: System.get_env("RECALL_API_KEY"),
+  gemini: System.get_env("GEMINI_API_KEY")
+
 # Configures the endpoint
 config :postmeeting, PostmeetingWeb.Endpoint,
   url: [host: "localhost"],
