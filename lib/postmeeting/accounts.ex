@@ -447,41 +447,46 @@ defmodule Postmeeting.Accounts do
   Creates a user with a primary Google account or logs in an existing user.
   """
   def create_user_with_google(user_params, auth) do
-    case get_user_by_email(user_params.email) do
-      # User exists, ensure they have a Google account
-      %User{} = user ->
-        case get_primary_google_account(user) do
-          nil ->
-            # Add Google account as primary
-            create_primary_google_account(user, auth)
-            {:ok, user}
+    # Try to create the user first, handling potential race conditions
+    insert_result =
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(
+        :user,
+        User.registration_changeset(%User{}, user_params),
+        on_conflict: [set: [updated_at: DateTime.utc_now()]],
+        conflict_target: :email
+      )
+      |> Repo.transaction()
 
-          _google_account ->
-            # User already has a primary Google account
-            {:ok, user}
+    case insert_result do
+      {:ok, %{user: user}} ->
+        # New user created, add Google account
+        case create_primary_google_account(user, auth) do
+          {:ok, _google_account} -> {:ok, user}
+          {:error, changeset} -> {:error, changeset}
         end
 
-      nil ->
-        # Create new user and primary Google account
-        Ecto.Multi.new()
-        |> Ecto.Multi.insert(:user, User.registration_changeset(%User{}, user_params))
-        |> Ecto.Multi.insert(:google_account, fn %{user: user} ->
-          GoogleAccount.changeset(%GoogleAccount{}, %{
-            user_id: user.id,
-            email: auth.info.email,
-            access_token: auth.credentials.token,
-            refresh_token: auth.credentials.refresh_token,
-            expires_at:
-              auth.credentials.expires_at && DateTime.from_unix!(auth.credentials.expires_at),
-            scope: auth.credentials.scopes,
-            is_primary: true,
-            calendar_sync_enabled: true
-          })
-        end)
-        |> Repo.transaction()
-        |> case do
-          {:ok, %{user: user}} -> {:ok, user}
-          {:error, _, changeset, _} -> {:error, changeset}
+      {:error, :user, changeset, _} ->
+        # If insert failed due to conflict, try to get existing user
+        case get_user_by_email(user_params.email) do
+          %User{} = user ->
+            # User exists, ensure they have a Google account
+            case get_primary_google_account(user) do
+              nil ->
+                # Add Google account as primary
+                case create_primary_google_account(user, auth) do
+                  {:ok, _google_account} -> {:ok, user}
+                  {:error, changeset} -> {:error, changeset}
+                end
+
+              _google_account ->
+                # User already has a primary Google account
+                {:ok, user}
+            end
+
+          nil ->
+            # Something else went wrong
+            {:error, changeset}
         end
     end
   end
