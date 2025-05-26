@@ -18,7 +18,6 @@ defmodule Postmeeting.Services.GeminiService do
 #{transcript_text}"
 
     generate_content(prompt)
-    |> dbg()
   end
 
   @doc """

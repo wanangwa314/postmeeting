@@ -91,7 +91,17 @@ defmodule PostmeetingWeb.CalendarLive do
                 <.table id="meetings" rows={@completed_meetings}>
                   <:col :let={meeting} label="Meeting Name">
                     <div class="flex items-center">
-                      <div class="ml-0">
+                      <div class="flex-shrink-0 mr-3">
+                        <%= case meeting.platform_type do %>
+                          <% "MEET" -> %>
+                            <img src="https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v6/web-64dp/logo_meet_2020q4_color_1x_web_64dp.png" alt="Google Meet" class="h-8 w-8">
+                          <% "TEAMS" -> %>
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c9/Microsoft_Office_Teams_%282018%E2%80%93present%29.svg" alt="Microsoft Teams" class="h-8 w-8">
+                          <% "ZOOM" -> %>
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/7/7b/Zoom_Communications_Logo.svg" alt="Zoom" class="h-8 w-8">
+                        <% end %>
+                      </div>
+                      <div>
                         <div class="text-sm font-medium text-gray-900">{meeting.name}</div>
                         <div class="text-sm text-gray-500">
                           {format_platform(meeting.platform_type)}

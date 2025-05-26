@@ -7,7 +7,7 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"user_id" => user_id}}) do
     with user when not is_nil(user) <- Accounts.get_user!(user_id),
-         {:ok, events} <- Calendar.list_events_with_meeting_links(user) do
+         {:ok, events} <- Calendar.list_events_with_meeting_links(user) |> dbg() do
       Enum.each(events, fn event ->
         # Extract meeting details - using string keys
         start_time = parse_event_time(event["start"])
@@ -81,6 +81,7 @@ defmodule Postmeeting.Workers.CalendarSyncWorker do
 
       {:error, :no_events} ->
         Logger.info("No calendar events found for user #{user_id}")
+
       {:error, reason} ->
         Logger.error("Failed to fetch calendar events: #{inspect(reason)}")
         {:error, reason}

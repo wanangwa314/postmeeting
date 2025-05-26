@@ -13,12 +13,13 @@ defmodule Postmeeting.Calendar do
   def list_events_with_meeting_links(user) do
     google_accounts = get_google_accounts(user)
 
-    all_events = Enum.reduce(google_accounts, [], fn account, acc ->
-      case fetch_events(account.access_token) do
-        {:ok, %{"items" => items}} when is_list(items) -> acc ++ items
-        _ -> acc
-      end
-    end)
+    all_events =
+      Enum.reduce(google_accounts, [], fn account, acc ->
+        case fetch_events(account.access_token) do
+          {:ok, %{"items" => items}} when is_list(items) -> acc ++ items
+          _ -> acc
+        end
+      end)
 
     case all_events do
       [] -> {:error, :no_events}
@@ -33,20 +34,24 @@ defmodule Postmeeting.Calendar do
   def list_structured_events_with_meeting_links(user) do
     google_accounts = get_google_accounts(user)
 
-    all_events = Enum.reduce(google_accounts, [], fn account, acc ->
-      case fetch_events(account.access_token) do
-        {:ok, %{"items" => items}} when is_list(items) -> acc ++ items
-        _ -> acc
-      end
-    end)
+    all_events =
+      Enum.reduce(google_accounts, [], fn account, acc ->
+        case fetch_events(account.access_token) do
+          {:ok, %{"items" => items}} when is_list(items) -> acc ++ items
+          _ -> acc
+        end
+      end)
 
     case all_events do
-      [] -> {:error, :no_events}
+      [] ->
+        {:error, :no_events}
+
       events ->
         structured_events =
           events
           |> filter_meeting_events()
           |> Enum.map(&extract_event_info/1)
+
         {:ok, structured_events}
     end
   end
@@ -292,9 +297,13 @@ defmodule Postmeeting.Calendar do
   end
 
   defp filter_meeting_events(%{"items" => items}) when is_list(items) do
-    # Return raw events for backward compatibility
-    # Use extract_event_info/1 separately if you need structured data
+    # Handle Google Calendar API response format
     Enum.filter(items, &has_meeting_link?/1)
+  end
+
+  defp filter_meeting_events(events) when is_list(events) do
+    # Handle direct list of events
+    Enum.filter(events, &has_meeting_link?/1)
   end
 
   defp filter_meeting_events(_), do: []
