@@ -1,10 +1,15 @@
 defmodule PostmeetingWeb.AuthController do
   use PostmeetingWeb, :controller
   plug Ueberauth
-
+  
   alias Postmeeting.Accounts
   alias PostmeetingWeb.UserAuth
-  alias Postmeeting.Auth.LinkedIn
+  alias Postmeeting.Auth.{LinkedIn, Google, Facebook}
+
+  # Only allow Google for initial login
+  def login(conn, _params) do
+    redirect(conn, to: ~p"/auth/google")
+  end
 
   # Handle LinkedIn OAuth specifically
   def request(conn, %{"provider" => "linkedin"}) do
@@ -48,55 +53,78 @@ defmodule PostmeetingWeb.AuthController do
     |> redirect(to: ~p"/")
   end
 
-  def callback(%{assigns: %{ueberauth_auth: %{provider: :linkedin} = auth}} = conn, _params) do
-    case OAuth2.Client.get_token(Postmeeting.Auth.LinkedIn.client(),
-           code: auth.credentials.token,
-           grant_type: "authorization_code"
-         ) do
-      {:ok, client} ->
-        case find_or_create_user(%{
-               email: auth.info.email,
-               name: auth.info.name || auth.info.nickname
-             }) do
-          {:ok, user} ->
-            case Accounts.create_linkedin_account(user, client) do
-              {:ok, _linkedin_account} ->
-                conn
-                |> put_flash(:info, "Successfully connected with LinkedIn.")
-                |> UserAuth.log_in_user(user)
-
-              {:error, :already_connected} ->
-                conn
-                |> put_flash(:error, "This user already has a connected LinkedIn account.")
-                |> redirect(to: ~p"/")
-            end
-
-          {:error, _reason} ->
-            conn
-            |> put_flash(:error, "Error authenticating with LinkedIn.")
-            |> redirect(to: ~p"/")
-        end
-
-      {:error, _reason} ->
-        conn
-        |> put_flash(:error, "Error authenticating with LinkedIn.")
-        |> redirect(to: ~p"/")
-    end
-  end
-
-  def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :google} = auth}} = conn, _params) do
     user_params = %{
       email: auth.info.email,
       name: auth.info.name || auth.info.nickname
     }
 
-    case find_or_create_user(user_params) do
-      {:ok, user} ->
-        case Accounts.create_facebook_account(user, auth) do
+    case conn.assigns[:current_user] do
+      nil ->
+        # First time Google login - create user and primary Google account
+        case Accounts.create_user_with_google(user_params, auth) do
+          {:ok, user} ->
+            conn
+            |> put_flash(:info, "Welcome! Account created successfully.")
+            |> UserAuth.log_in_user(user)
+
+          {:error, _reason} ->
+            conn
+            |> put_flash(:error, "Error creating account.")
+            |> redirect(to: ~p"/")
+        end
+
+      current_user ->
+        # Adding additional Google account for calendar sync
+        case Accounts.add_google_calendar_account(current_user, auth) do
+          {:ok, _google_account} ->
+            conn
+            |> put_flash(:info, "Successfully added Google Calendar account.")
+            |> redirect(to: ~p"/calendar")
+
+          {:error, :already_connected} ->
+            conn
+            |> put_flash(:error, "This Google account is already connected.")
+            |> redirect(to: ~p"/calendar")
+        end
+    end
+  end
+
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :linkedin} = auth}} = conn, _params) do
+    case conn.assigns[:current_user] do
+      nil ->
+        conn
+        |> put_flash(:error, "Please log in with your Google account first.")
+        |> redirect(to: ~p"/auth/google")
+
+      current_user ->
+        case Accounts.add_linkedin_account(current_user, auth) do
+          {:ok, _linkedin_account} ->
+            conn
+            |> put_flash(:info, "Successfully connected LinkedIn for posting.")
+            |> redirect(to: ~p"/social")
+
+          {:error, :already_connected} ->
+            conn
+            |> put_flash(:error, "This LinkedIn account is already connected.")
+            |> redirect(to: ~p"/social")
+        end
+    end
+  end
+
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :facebook} = auth}} = conn, _params) do
+    case conn.assigns[:current_user] do
+      nil ->
+        conn
+        |> put_flash(:error, "Please log in with your Google account first.")
+        |> redirect(to: ~p"/auth/google")
+
+      current_user ->
+        case Accounts.add_facebook_account(current_user, auth) do
           {:ok, _facebook_account} ->
             conn
-            |> put_flash(:info, "Successfully connected with Facebook.")
-            |> UserAuth.log_in_user(user)
+            |> put_flash(:info, "Successfully connected Facebook for posting.")
+            |> redirect(to: ~p"/social")
 
           {:error, :already_connected} ->
             conn

@@ -114,38 +114,63 @@ defmodule PostmeetingWeb.MeetingDetailLive do
            )
            |> assign(posting_status: Map.put(socket.assigns.posting_status, :facebook, :error))}
         else
-          # Set posting status to loading
-          socket =
-            assign(socket,
-              posting_status: Map.put(socket.assigns.posting_status, :facebook, :posting)
-            )
+          # Use share dialog approach instead of direct API posting
+          if Facebook.has_posting_permissions?(facebook_account) do
+            # Direct API posting (when you have approval)
+            socket =
+              assign(socket,
+                posting_status: Map.put(socket.assigns.posting_status, :facebook, :posting)
+              )
 
-          case Facebook.post_to_feed(facebook_account, socket.assigns.meeting.facebook_post) do
-            {:ok, _response} ->
-              {:noreply,
-               socket
-               |> put_flash(:info, "Successfully posted to Facebook!")
-               |> assign(
-                 posting_status: Map.put(socket.assigns.posting_status, :facebook, :success)
-               )}
+            case Facebook.post_to_feed(facebook_account, socket.assigns.meeting.facebook_post) do
+              {:ok, _response} ->
+                {:noreply,
+                 socket
+                 |> put_flash(:info, "Successfully posted to Facebook!")
+                 |> assign(
+                   posting_status: Map.put(socket.assigns.posting_status, :facebook, :success)
+                 )}
 
-            {:error, error} ->
-              error_message =
-                case error do
-                  %{"error" => %{"message" => msg}} -> msg
-                  %{"message" => msg} -> msg
-                  _ -> "Failed to post to Facebook. Please try again."
-                end
+              {:error, error} ->
+                error_message =
+                  case error do
+                    %{"error" => %{"message" => msg}} -> msg
+                    %{"message" => msg} -> msg
+                    _ -> "Failed to post to Facebook. Please try again."
+                  end
 
-              {:noreply,
-               socket
-               |> put_flash(:error, "Facebook posting failed: #{error_message}")
-               |> assign(
-                 posting_status: Map.put(socket.assigns.posting_status, :facebook, :error)
-               )}
+                {:noreply,
+                 socket
+                 |> put_flash(:error, "Facebook posting failed: #{error_message}")
+                 |> assign(
+                   posting_status: Map.put(socket.assigns.posting_status, :facebook, :error)
+                 )}
+            end
+          else
+            # Use Facebook Share Dialog approach
+            meeting_link = build_meeting_share_link(socket.assigns.meeting)
+
+            share_url =
+              Facebook.generate_share_url_with_link(
+                socket.assigns.meeting.facebook_post,
+                meeting_link,
+                "#PostMeeting"
+              )
+
+            {:noreply,
+             socket
+             |> put_flash(:info, "Opening Facebook to share your post...")
+             |> redirect(external: share_url)}
           end
         end
     end
+  end
+
+  # Add this helper function to generate a shareable link for your meeting
+  defp build_meeting_share_link(meeting) do
+    # You can customize this to point to your app's meeting page or just your app homepage
+    # For now, using a generic link - you might want to make this a public meeting link
+    "https://yourapp.com/meetings/#{meeting.id}"
   end
 
   @impl true
@@ -326,20 +351,20 @@ defmodule PostmeetingWeb.MeetingDetailLive do
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <!-- Facebook Post -->
-        <.content_card
-          title="Facebook Post"
-          content={@meeting.facebook_post}
-          field="facebook"
-          copied_field={@copied_field}
-          show_post_button={true}
-          post_action="post_to_facebook"
-          post_button_text="Post to Facebook"
-          post_button_color="bg-blue-500 hover:bg-blue-600"
-          account_connected={not is_nil(@facebook_account) and not token_expired?(@facebook_account)}
-          posting_status={Map.get(@posting_status, :facebook)}
-          platform="facebook"
-          icon="📘"
-        />
+    <.content_card
+    title="Facebook Post"
+    content={@meeting.facebook_post}
+    field="facebook"
+    copied_field={@copied_field}
+    show_post_button={true}
+    post_action="post_to_facebook"
+    post_button_text="Share to Facebook"
+    post_button_color="bg-blue-500 hover:bg-blue-600"
+    account_connected={not is_nil(@facebook_account) and not token_expired?(@facebook_account)}
+    posting_status={Map.get(@posting_status, :facebook)}
+    platform="facebook"
+    icon="📘"
+    />
 
         <!-- Transcript Preview -->
         <%= if @meeting.transcript do %>

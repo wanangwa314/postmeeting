@@ -74,7 +74,7 @@ config :ueberauth, Ueberauth,
     facebook:
       {Ueberauth.Strategy.Facebook,
        [
-         default_scope: "email,public_profile,pages_manage_posts,publish_actions"
+         default_scope: "email,public_profile"
        ]}
   ]
 
@@ -84,8 +84,8 @@ config :ueberauth, Ueberauth.Strategy.Google.OAuth,
   client_secret: "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"
 
 config :ueberauth, Ueberauth.Strategy.Facebook.OAuth,
-  client_id: System.get_env("FACEBOOK_CLIENT_ID"),
-  client_secret: System.get_env("FACEBOOK_CLIENT_SECRET")
+  client_id: "617452034083152",
+  client_secret: "9d1207ed512d8968fa1b1d4c565559d6"
 
 # Configure Recall.ai
 config :postmeeting, :recall, api_key: "a9020bfae28aaf581cf44b9f8fafb7b1b6432323"
